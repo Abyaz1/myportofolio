@@ -1,0 +1,31 @@
+# Django
+*.log
+*.pot
+*.pyc
+__pycache__/
+db.sqlite3
+media
+
+# Environment variables & local configuration
+.env
+.env*
+!.env.example*
+
+# Virtual Environment
+env/
+venv/
+ENV/
+.venv/
+
+# Backup files
+*.bak
+
+# IDE & Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# macOS / OS generated
+.DS_Store
+Thumbs.db
