@@ -194,14 +194,12 @@ h1, .brand {
     border-radius: 2px;
 }
 
-/* Skills Grid (CSS Grid) */
 .skills-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: 1.75rem;
 }
 
-/* Skill Card Component & Hover Animation */
 .skill-card {
     background-color: #ffffff;
     border: 2px solid var(--ink);
