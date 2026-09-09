@@ -279,7 +279,8 @@ h1, .brand {
     .social-links {
         justify-content: flex-start;
     }
-    .experience-section {
+}
+.experience-section {
     padding: 4rem 0;
     border-top: 1px solid var(--line);
 }
@@ -331,5 +332,4 @@ h1, .brand {
     margin-top: 1rem;
     font-size: 0.85rem;
     font-weight: 600;
-}
 }
