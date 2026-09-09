@@ -12,9 +12,10 @@
 <body>
     <header class="site-header">
         <div class="container">
-            <a href="#profile" class="brand">Abyaz</a>
+            <a href="{% url 'main:show_main' %}" class="brand">{{ name }}</a>
             <nav>
-                <a href="#profile">Profile</a>
+                <a href="{% url 'main:show_main' %}">Profile</a>
+                <a href="{% url 'main:show_experience' %}">Experience</a>
             </nav>
         </div>
     </header>
@@ -24,29 +25,72 @@
             <div class="container hero-grid">
                 <div class="hero-identity">
                     <p class="hero-kicker">Computer Science &middot; Universitas Indonesia</p>
-                    <h1> M Naufal Abyaz Bawono </h1>
+                    <h1>{{ name }}</h1>
                 </div>
                 <div class="hero-photo">
                     <div class="photo-block"></div>
-                    <img class="avatar" src="/static/img/Abyaz.jpg" alt="Photo of Abyaz">
+                    <img class="avatar" src="/static/img/Abyaz.jpg" alt="Photo of {{ name }}">
                 </div>
                 <div class="hero-details">
-                    <p class="bio">CS student at Universitas Indonesia for longer than planned, now a familiar (and slightly dreaded) face among Fasilkom students as a teaching assistant across several courses.</p>
+                    <p class="bio">{{ bio }}</p>
                     <dl class="meta-list">
                         <div class="meta-row">
                             <dt>NPM</dt>
-                            <dd>2506656993</dd>
+                            <dd>{{ npm }}</dd>
                         </div>
                         <div class="meta-row">
                             <dt>Program</dt>
-                            <dd>S1 Ilmu Komputer</dd>
+                            <dd>{{ study_program }}</dd>
                         </div>
                     </dl>
                     <div class="social-links">
-                        <a href="https://github.com/Abyaz1/" class="social-link">GitHub</a>
-                        <a href="https://linkedin.com/in/abyaz" class="social-link">LinkedIn</a>
+                        <a href="https://github.com/Abyaz1/" class="social-link" target="_blank" rel="noopener">GitHub</a>
+                        <a href="https://linkedin.com/in/abyaz" class="social-link" target="_blank" rel="noopener">LinkedIn</a>
                         <a href="mailto:abyazbawono@gmail.com" class="social-link">Email</a>
                     </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="skills-section" id="skills">
+            <div class="container">
+                <h2 class="section-title">Skills & Interests</h2>
+                <div class="skills-grid">
+                    <article class="skill-card">
+                        <div>
+                            <h3>Data Science</h3>
+                            <p>Experience with data analysis, visualization, and statistical modeling.</p>
+                        </div>
+                        <div class="skill-tags">
+                            <span class="tag">Python</span>
+                            <span class="tag">Pandas</span>
+                            <span class="tag">Matplotlib</span>
+                        </div>
+                    </article>
+
+                    <article class="skill-card">
+                        <div>
+                            <h3>AI / ML</h3>
+                            <p>Knowledge of machine learning algorithms, deep learning, and neural networks.</p>
+                        </div>
+                        <div class="skill-tags">
+                            <span class="tag">Scikit-Learn</span>
+                            <span class="tag">Google ADK</span>
+                            <span class="tag">PyTorch</span>
+                        </div>
+                    </article>
+
+                    <article class="skill-card">
+                        <div>
+                            <h3>Web Development</h3>
+                            <p>Proficient in building responsive web apps with HTML, CSS, JavaScript, and Django.</p>
+                        </div>
+                        <div class="skill-tags">
+                            <span class="tag">Django</span>
+                            <span class="tag">HTML/CSS</span>
+                            <span class="tag">JavaScript</span>
+                        </div>
+                    </article>
                 </div>
             </div>
         </section>
@@ -54,7 +98,7 @@
 
     <footer class="site-footer">
         <div class="container">
-            <p>&copy; 2026 Abyaz. Fakultas Ilmu Komputer, Universitas Indonesia.</p>
+            <p>&copy; 2026 {{ name }}. Fakultas Ilmu Komputer, Universitas Indonesia.</p>
         </div>
     </footer>
 </body>

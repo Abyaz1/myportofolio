@@ -169,6 +169,93 @@ h1, .brand {
     border: 3px solid var(--ink);
 }
 
+/* Skills Section Styles */
+.skills-section {
+    padding: 3rem 0 5rem;
+    border-top: 1px solid var(--line);
+}
+
+.section-title {
+    font-family: "Space Grotesk", -apple-system, sans-serif;
+    font-size: 2rem;
+    color: var(--ink);
+    margin-bottom: 2rem;
+    position: relative;
+    display: inline-block;
+}
+
+.section-title::after {
+    content: "";
+    display: block;
+    width: 50%;
+    height: 4px;
+    background-color: var(--accent);
+    margin-top: 0.3rem;
+    border-radius: 2px;
+}
+
+.skills-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.75rem;
+}
+
+.skill-card {
+    background-color: #ffffff;
+    border: 2px solid var(--ink);
+    border-radius: var(--radius);
+    padding: 1.75rem;
+    box-shadow: 4px 4px 0px var(--ink);
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.skill-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 8px 8px 0px var(--accent);
+    border-color: var(--ink);
+}
+
+.skill-card h3 {
+    font-family: "Space Grotesk", -apple-system, sans-serif;
+    font-size: 1.35rem;
+    color: var(--ink);
+    margin-bottom: 0.5rem;
+}
+
+.skill-card p {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin-bottom: 1.25rem;
+}
+.skill-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: auto;
+}
+
+.tag {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.25rem 0.65rem;
+    background-color: var(--paper);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.skill-card:hover .tag {
+    border-color: var(--accent-dark);
+    background-color: #f7eedf;
+}
+
 .site-footer {
     padding: 1.5rem;
     color: var(--text-muted);
@@ -192,4 +279,57 @@ h1, .brand {
     .social-links {
         justify-content: flex-start;
     }
+    .experience-section {
+    padding: 4rem 0;
+    border-top: 1px solid var(--line);
+}
+
+.section-kicker {
+    color: var(--accent-dark);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.experience-section h1 {
+    margin: 0.4rem 0 1.5rem;
+    font-size: 2rem;
+}
+
+.experience-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
+}
+
+.experience-card {
+    padding: 1.25rem;
+    background-color: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+}
+
+.experience-category {
+    color: var(--accent-dark);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.experience-card h2 {
+    margin: 0.5rem 0;
+    font-size: 1.25rem;
+}
+
+.experience-description,
+.empty-state {
+    color: var(--text-muted);
+}
+
+.experience-status {
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
 }
