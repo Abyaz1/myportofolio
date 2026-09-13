@@ -31,9 +31,6 @@
                 <div class="education-grid">
                     {% for education in education_list %}
                         <article class="education-card">
-                            <span class="education-category">
-                                {{ education.get_degree_display }}
-                            </span>
                             <h2>{{ education.institution }}</h2>
                             <p class="education-description">
                                 {{ education.Activity }}

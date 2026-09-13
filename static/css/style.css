@@ -280,7 +280,8 @@ h1, .brand {
         justify-content: flex-start;
     }
 }
-.experience-section {
+.experience-section,
+.education-section {
     padding: 4rem 0;
     border-top: 1px solid var(--line);
 }
@@ -293,7 +294,8 @@ h1, .brand {
     text-transform: uppercase;
 }
 
-.experience-section h1 {
+.experience-section h1,
+.education-section h1 {
     margin: 0.4rem 0 1.5rem;
     font-size: 2rem;
 }
@@ -304,31 +306,42 @@ h1, .brand {
     gap: 1rem;
 }
 
-.experience-card {
+.education-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.experience-card,
+.education-card {
     padding: 1.25rem;
     background-color: #fff;
     border: 1px solid var(--line);
     border-radius: var(--radius);
 }
 
-.experience-category {
+.experience-category,
+.education-category {
     color: var(--accent-dark);
     font-size: 0.75rem;
     font-weight: 700;
     text-transform: uppercase;
 }
 
-.experience-card h2 {
+.experience-card h2,
+.education-card h2 {
     margin: 0.5rem 0;
     font-size: 1.25rem;
 }
 
 .experience-description,
+.education-description,
 .empty-state {
     color: var(--text-muted);
 }
 
-.experience-status {
+.experience-status,
+.education-status {
     margin-top: 1rem;
     font-size: 0.85rem;
     font-weight: 600;
