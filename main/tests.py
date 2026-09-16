@@ -102,3 +102,60 @@ class MainTest(TestCase):
         self.assertFalse(self.education.is_ongoing)
         self.assertContains(response, "Selesai")
         self.assertNotContains(response, "Sedang berlangsung")
+
+    def test_education_form_valid(self):
+        from main.forms import EducationForm
+        form = EducationForm(data={
+            "institution": "Universitas Indonesia",
+            "Activity": "S1 Ilmu Komputer",
+        })
+        self.assertTrue(form.is_valid())
+
+    def test_create_education_view(self):
+        response = self.client.get(reverse("main:create_education"))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "education_form.html")
+
+        post_response = self.client.post(reverse("main:create_education"), data={
+            "institution": "SMA Negeri 1",
+            "Activity": "IPA",
+        })
+        self.assertRedirects(post_response, reverse("main:show_education"))
+        self.assertTrue(Education.objects.filter(institution="SMA Negeri 1").exists())
+
+    def test_get_experience_json(self):
+        response = self.client.get(reverse("main:get_experience_json"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/json")
+
+        response_filter = self.client.get(reverse("main:get_experience_json") + "?title=Asisten")
+        self.assertEqual(response_filter.status_code, 200)
+        self.assertContains(response_filter, "Asisten Dosen PBP")
+
+    def test_delete_experience(self):
+        post_response = self.client.post(
+            reverse("main:delete_experience", kwargs={"experience_id": self.experience.id})
+        )
+        self.assertRedirects(post_response, reverse("main:show_experience"))
+        self.assertFalse(Experience.objects.filter(id=self.experience.id).exists())
+
+    def test_delete_education(self):
+        post_response = self.client.post(
+            reverse("main:delete_education", kwargs={"education_id": self.education.id})
+        )
+        self.assertRedirects(post_response, reverse("main:show_education"))
+        self.assertFalse(Education.objects.filter(id=self.education.id).exists())
+
+    def test_create_experience_view(self):
+        response = self.client.get(reverse("main:create_experience"))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "experience_form.html")
+
+        post_response = self.client.post(reverse("main:create_experience"), data={
+            "title": "Software Engineer Intern",
+            "description": "Magang di perusahaan IT",
+            "category": "internship",
+            "thumbnail": "",
+        })
+        self.assertRedirects(post_response, reverse("main:show_experience"))
+        self.assertTrue(Experience.objects.filter(title="Software Engineer Intern").exists())
