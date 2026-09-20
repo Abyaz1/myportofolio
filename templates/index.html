@@ -76,5 +76,63 @@
             </div>
         </div>
     </section>
+
+    <section class="mading-section" id="mading">
+        <div class="container">
+            <h2 class="section-title">Mading Pesan</h2>
+            <p class="section-kicker">Tinggalkan jejak, pesan, atau kesan di sini</p>
+
+            <div class="mading-form-container">
+                <form method="post" action="{% url 'main:create_mading' %}" class="project-form">
+                    {% csrf_token %}
+                    {% for field in mading_form %}
+                        <div class="form-group">
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% for error in field.errors %}
+                                <p class="form-error">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endfor %}
+                    <button type="submit" class="button">Post Pesan ke Mading</button>
+                </form>
+            </div>
+
+            <div class="mading-grid">
+                {% for item in mading_list %}
+                    <article class="mading-card" id="mading-{{ item.id }}">
+                        <div class="mading-card-header">
+                            <span class="mading-author">{{ item.name }}</span>
+                            <span class="mading-date">{{ item.created_at|date:"d M Y, H:i" }}</span>
+                        </div>
+                        <p class="mading-content">{{ item.message }}</p>
+
+                        <div class="mading-card-footer">
+                            <div class="mading-reactions">
+                                <span class="mading-reaction-label">Likes: <strong>{{ item.likes }}</strong></span>
+                                <div class="mading-counter-buttons">
+                                    <form method="post" action="{% url 'main:decrease_mading' item.id %}" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="button-counter" title="Kurang Likes" aria-label="Kurang">−</button>
+                                    </form>
+                                    <form method="post" action="{% url 'main:increase_mading' item.id %}" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="button-counter" title="Tambah Likes" aria-label="Tambah">+</button>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <form method="post" action="{% url 'main:delete_mading' item.id %}" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="button button-danger button-sm" onclick="return confirm('Apakah Anda yakin ingin menghapus pesan ini?')">Hapus</button>
+                            </form>
+                        </div>
+                    </article>
+                {% empty %}
+                    <p class="empty-state">Belum ada pesan di mading. Jadilah yang pertama mengirim pesan!</p>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
 </main>
 {% endblock content %}

@@ -611,4 +611,143 @@ h1, .brand {
         width: 100%;
         text-align: center;
     }
-}
+}
+
+.mading-section {
+    padding: 3.5rem 0 5rem;
+    border-top: 1px solid var(--line);
+}
+
+.mading-form-container {
+    background-color: #ffffff;
+    border: 2px solid var(--ink);
+    border-radius: var(--radius);
+    padding: 1.75rem;
+    box-shadow: 4px 4px 0px var(--ink);
+    margin: 1.5rem 0 2.5rem;
+}
+
+.mading-form-container .project-form {
+    margin-top: 0;
+}
+
+.mading-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.mading-card {
+    background-color: #ffffff;
+    border: 2px solid var(--ink);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    box-shadow: 4px 4px 0px var(--ink);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.mading-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 6px 6px 0px var(--accent);
+}
+
+.mading-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px dashed var(--line);
+}
+
+.mading-author {
+    font-family: "Space Grotesk", -apple-system, sans-serif;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--ink);
+}
+
+.mading-date {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.mading-content {
+    color: var(--ink);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin-bottom: 1.25rem;
+    white-space: pre-line;
+    word-break: break-word;
+}
+
+.mading-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--line);
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.mading-reactions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.mading-reaction-label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.mading-reaction-label strong {
+    color: var(--ink);
+}
+
+.mading-counter-buttons {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.button-counter {
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--ink);
+    border-radius: var(--radius);
+    background-color: var(--paper);
+    color: var(--ink);
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 2px 2px 0px var(--ink);
+    transition: all 0.15s ease;
+    padding: 0;
+    line-height: 1;
+}
+
+.button-counter:hover {
+    background-color: var(--accent);
+    color: white;
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0px var(--ink);
+}
+
+.button-counter:active {
+    transform: translate(1px, 1px);
+    box-shadow: 1px 1px 0px var(--ink);
+}
+
+.button-sm {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8rem;
+}
+

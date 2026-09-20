@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from main.models import Education, Experience
+from main.models import Education, Experience, Mading
 
 
 class MainTest(TestCase):
@@ -159,3 +159,44 @@ class MainTest(TestCase):
         })
         self.assertRedirects(post_response, reverse("main:show_experience"))
         self.assertTrue(Experience.objects.filter(title="Software Engineer Intern").exists())
+
+    def test_mading_crud(self):
+        mading = Mading.objects.create(
+            name="Pengunjung",
+            message="Keren banget portofolionya!",
+        )
+        self.assertEqual(str(mading), "Pengunjung: Keren banget portofolionya!")
+        self.assertEqual(mading.likes, 0)
+
+        response = self.client.get(reverse("main:show_main"))
+        self.assertContains(response, "Mading Pesan")
+        self.assertContains(response, "Keren banget portofolionya!")
+
+        inc_response = self.client.post(
+            reverse("main:increase_mading", kwargs={"mading_id": mading.id})
+        )
+        mading.refresh_from_db()
+        self.assertEqual(mading.likes, 1)
+
+        dec_response = self.client.post(
+            reverse("main:decrease_mading", kwargs={"mading_id": mading.id})
+        )
+        mading.refresh_from_db()
+        self.assertEqual(mading.likes, 0)
+
+        self.client.post(
+            reverse("main:decrease_mading", kwargs={"mading_id": mading.id})
+        )
+        mading.refresh_from_db()
+        self.assertEqual(mading.likes, 0)
+
+        create_response = self.client.post(reverse("main:create_mading"), data={
+            "name": "Budi",
+            "message": "Semangat belajarnya!",
+        })
+        self.assertTrue(Mading.objects.filter(name="Budi").exists())
+
+        del_response = self.client.post(
+            reverse("main:delete_mading", kwargs={"mading_id": mading.id})
+        )
+        self.assertFalse(Mading.objects.filter(id=mading.id).exists())

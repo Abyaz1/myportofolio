@@ -1,5 +1,5 @@
 from django.forms import ModelForm, Select, Textarea, TextInput, URLInput
-from main.models import Education, Experience
+from main.models import Education, Experience, Mading
 
 
 class EducationForm(ModelForm):
@@ -68,4 +68,34 @@ class ExperienceForm(ModelForm):
                 }
             ),
         }
+
+
+class MadingForm(ModelForm):
+    class Meta:
+        model = Mading
+        fields = [
+            "name",
+            "message",
+        ]
+
+        labels = {
+            "name": "Nama Pengirim",
+            "message": "Pesan Mading",
+        }
+
+        widgets = {
+            "name": TextInput(
+                attrs={
+                    "placeholder": "Masukkan nama Anda",
+                    "maxlength": 100,
+                }
+            ),
+            "message": Textarea(
+                attrs={
+                    "placeholder": "Tuliskan pesan mading di sini...",
+                    "rows": 3,
+                }
+            ),
+        }
+
 
