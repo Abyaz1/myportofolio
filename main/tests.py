@@ -160,6 +160,45 @@ class MainTest(TestCase):
         self.assertRedirects(post_response, reverse("main:show_experience"))
         self.assertTrue(Experience.objects.filter(title="Software Engineer Intern").exists())
 
+    def test_edit_experience_view(self):
+        response = self.client.get(
+            reverse("main:edit_experience", kwargs={"experience_id": self.experience.id})
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "experience_edit_form.html")
+
+        post_response = self.client.post(
+            reverse("main:edit_experience", kwargs={"experience_id": self.experience.id}),
+            data={
+                "title": "Lead Assistant PBP",
+                "description": "Mengkoordinasi asisten dosen.",
+                "category": "part-time",
+                "thumbnail": "",
+            },
+        )
+        self.assertRedirects(post_response, reverse("main:show_experience"))
+        self.experience.refresh_from_db()
+        self.assertEqual(self.experience.title, "Lead Assistant PBP")
+
+    def test_edit_education_view(self):
+        response = self.client.get(
+            reverse("main:edit_education", kwargs={"education_id": self.education.id})
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "education_edit_form.html")
+
+        post_response = self.client.post(
+            reverse("main:edit_education", kwargs={"education_id": self.education.id}),
+            data={
+                "institution": "Universitas Indonesia Baru",
+                "Activity": "S2 Ilmu Komputer",
+            },
+        )
+        self.assertRedirects(post_response, reverse("main:show_education"))
+        self.education.refresh_from_db()
+        self.assertEqual(self.education.institution, "Universitas Indonesia Baru")
+
+
     def test_mading_crud(self):
         mading = Mading.objects.create(
             name="Pengunjung",

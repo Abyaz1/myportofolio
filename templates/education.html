@@ -27,6 +27,7 @@
 
                         <div class="project-card-actions">
                             <div class="project-actions">
+                                <a href="{% url 'main:edit_education' education.id %}" class="button button-secondary">Ubah</a>
                                 {% include "components/education_delete_modal.html" with education=education %}
                             </div>
                         </div>

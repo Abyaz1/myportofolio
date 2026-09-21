@@ -78,6 +78,23 @@ def delete_education(request, education_id):
     return redirect("main:show_education")
 
 
+def edit_education(request, education_id):
+    education = get_object_or_404(Education, pk=education_id)
+    form = EducationForm(request.POST or None, instance=education)
+
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Pendidikan berhasil diperbarui!")
+        return redirect("main:show_education")
+
+    context = {
+        "name": "M Naufal Abyaz Bawono",
+        "form": form,
+        "education": education,
+    }
+    return render(request, "education_edit_form.html", context)
+
+
 def create_experience(request):
     form = ExperienceForm(request.POST or None)
 
@@ -91,6 +108,24 @@ def create_experience(request):
         "form": form,
     }
     return render(request, "experience_form.html", context)
+
+
+def edit_experience(request, experience_id):
+    experience = get_object_or_404(Experience, pk=experience_id)
+    form = ExperienceForm(request.POST or None, instance=experience)
+
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Experience berhasil diperbarui!")
+        return redirect("main:show_experience")
+
+    context = {
+        "name": "M Naufal Abyaz Bawono",
+        "form": form,
+        "experience": experience,
+    }
+    return render(request, "experience_edit_form.html", context)
+
 
 
 def get_experience_json(request):

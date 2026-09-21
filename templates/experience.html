@@ -53,6 +53,7 @@
 
                         <div class="project-card-actions">
                             <div class="project-actions">
+                                <a href="{% url 'main:edit_experience' experience.id %}" class="button button-secondary">Ubah</a>
                                 {% include "components/experience_delete_modal.html" with experience=experience %}
                             </div>
                         </div>
