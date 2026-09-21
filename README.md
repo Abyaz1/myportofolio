@@ -12,6 +12,8 @@ Website portofolio statis yang dirancang menggunakan framework Django, struktur 
 - [Panduan Setup & Instalasi](#panduan-setup--instalasi)
 - [Tugas 1](#tugas-1)
 - [Tugas 2](#tugas-2)
+- [Tugas 3](#tugas-3)
+- [Progress Mingguan](#progress-mingguan)
 - [AI Disclosure](#ai-disclosure)
 - [Kontak](#kontak)
 
@@ -143,6 +145,45 @@ class Experience(models.Model):
 Karena terjadi perubahan struktur tabel pada model, kita harus menjalankan:
 1. `python manage.py makemigrations` untuk membuat berkas migrasi baru yang mencatat penambahan kolom `company` dan `project_url`.
 2. `python manage.py migrate` untuk menerapkan perubahan skema tersebut ke basis data nyata (`db.sqlite3`).
+
+## Tugas 3
+
+### 1. Penggunaan ModelForm dan Kewajiban {% csrf_token %}
+ModelForm digunakan karena secara otomatis memetakan field model ke elemen form HTML, menyediakan validasi data bawaan lewat `form.is_valid()`, dan mempermudah penyimpanan ke basis data cukup dengan `form.save()`.
+
+Tag `{% csrf_token %}` wajib disertakan untuk mencegah serangan Cross-Site Request Forgery (CSRF). Token acak unik ini memastikan setiap permintaan POST yang masuk benar-benar berasal dari formulir resmi aplikasi kita, bukan dari manipulasi situs luar.
+
+### 2. Alasan JSON Lebih Disukai Dibandingkan XML
+JSON memiliki struktur ringkas berbasis pasangan key-value tanpa tag penutup berulang sehingga ukuran payload lebih kecil dan hemat bandwidth. Selain itu, JSON didukung secara native di JavaScript (`JSON.parse()`) tanpa memerlukan proses parsing DOM yang rumit dan lambat seperti pada XML.
+
+### 3. Alur Pengembalian Data JSON dan Perlunya Serialization
+Alurnya dimulai ketika klien mengirimkan request GET ke endpoint URL. Rute pada `urls.py` mengarahkan permintaan ke fungsi view, lalu view mengambil data dari database menggunakan ORM Django. Kumpulan data tersebut kemudian diubah menjadi format teks JSON menggunakan `serializers.serialize()`, lalu dibungkus dalam `HttpResponse` dengan header `application/json` untuk dikirim kembali ke klien.
+
+Serialization diperlukan karena objek model Django merupakan objek Python di memori server yang tidak dapat dikirimkan langsung melalui protokol HTTP. Serialisasi menerjemahkan objek tersebut ke format teks universal (JSON) agar dapat dikirim lewat jaringan dan dipahami oleh berbagai platform klien.
+
+
+## Progress Mingguan
+
+Progres pengembangan proyek portofolio pribadi berdasarkan riwayat commit dan rincian pengerjaan tugas:
+
+### Minggu 1 - Tutorial 1: Setup Proyek Django & Static Web Layout
+- Inisialisasi Proyek: Pengaturan awal kerangka kerja Django, penataan direktori aplikasi, serta halaman profil utama (`index.html`).
+- Penerapan HTML5 Semantik: Menyusun struktur antarmuka menggunakan tag semantik HTML5 (`<header>`, `<nav>`, `<main>`, `<section>`, `<article>`, dan `<footer>`).
+- Responsive CSS3 Styling: Merancang stylesheet murni `style.css` menggunakan variabel CSS (`:root`), CSS Grid (`grid-template-areas`), Flexbox, serta typography responsif (`clamp()`).
+- Dokumentasi Awal: Menuliskan jawaban refleksi tugas 1 dan petunjuk setup awal di `README.md`.
+
+### Minggu 2 - Tutorial 2: Model Data Dinamis & Testing (Education & Experience)
+- Implementasi Model ORM: Membuat skema basis data `Education` dan `Experience` pada `main/models.py` serta mengeksekusi migrasi database (`makemigrations` & `migrate`).
+- Routing & Dynamic Views: Menyusun fungsi view dan pemetaan URL untuk menampilkan data pendidikan dan pengalaman secara dinamis dari database.
+- Konfigurasi Environment & Deployment: Penyesuaian `requirements.txt` ke Django 5.0 dan penambahan `CSRF_TRUSTED_ORIGINS` untuk server PWS.
+- Unit Testing & Styling: Menambahkan pengujian otomatis unit test untuk model/views serta menyempurnakan tampilan visual komponen.
+
+### Minggu 3 - Tutorial 3: Form Handling, JSON Serialization & Mading Pesan
+- Form Handling & ModelForm: Mengimplementasikan formulir interaktif menggunakan `ModelForm` untuk fitur input dan pembaruan data (`update`) pada `Education` dan `Experience`.
+- Fitur Mading Pesan: Menambahkan fitur Mading Pesan/Kesan pengunjung pada profil serta penyesuaian konfigurasi zona waktu (`timezone`).
+- Keamanan CSRF & Serialisasi Data: Menerapkan tag `{% csrf_token %}` pada form POST dan menyajikan data JSON menggunakan serialisasi Django ORM.
+- Dokumentasi & Refleksi: Menuliskan jawaban refleksi tugas 3 dan memperbarui dokumentasi proyek.
+
 
 ## AI Disclosure
 
