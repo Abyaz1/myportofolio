@@ -24,6 +24,10 @@
                         <dt>Program</dt>
                         <dd>{{ study_program }}</dd>
                     </div>
+                    <div class="meta-row">
+                        <dt>Sesi Terakhir Login</dt>
+                        <dd>{{ last_login }}</dd>
+                    </div>
                 </dl>
                 <div class="social-links">
                     <a href="https://github.com/Abyaz1/" class="social-link" target="_blank" rel="noopener">GitHub</a>
@@ -109,13 +113,13 @@
 
                         <div class="mading-card-footer">
                             <div class="mading-reactions">
-                                <span class="mading-reaction-label">Likes: <strong>{{ item.likes }}</strong></span>
+                                <span class="mading-reaction-label">Likes: <strong class="mading-likes-count">{{ item.likes }}</strong></span>
                                 <div class="mading-counter-buttons">
-                                    <form method="post" action="{% url 'main:decrease_mading' item.id %}" style="display:inline;">
+                                    <form method="post" action="{% url 'main:decrease_mading' item.id %}" class="mading-counter-form" style="display:inline;">
                                         {% csrf_token %}
                                         <button type="submit" class="button-counter" title="Kurang Likes" aria-label="Kurang">−</button>
                                     </form>
-                                    <form method="post" action="{% url 'main:increase_mading' item.id %}" style="display:inline;">
+                                    <form method="post" action="{% url 'main:increase_mading' item.id %}" class="mading-counter-form" style="display:inline;">
                                         {% csrf_token %}
                                         <button type="submit" class="button-counter" title="Tambah Likes" aria-label="Tambah">+</button>
                                     </form>
@@ -136,3 +140,63 @@
     </section>
 </main>
 {% endblock content %}
+
+{% block script %}
+<script>
+// Fungsi utilitas untuk membaca nilai cookie berdasarkan kuncinya
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Menangani klik counter like secara asinkronus (Fetch API) dengan header X-CSRFToken
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.mading-counter-form').forEach(form => {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault(); // Mencegah reload halaman penuh
+
+            const button = form.querySelector('button');
+            const url = form.getAttribute('action');
+            const card = form.closest('.mading-card');
+            const countEl = card ? card.querySelector('.mading-likes-count') : null;
+
+            if (button) button.disabled = true;
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': getCookie('csrftoken') // Wajib disertakan agar tidak 403 Forbidden
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (countEl && data.likes !== undefined) {
+                        countEl.textContent = data.likes;
+                    }
+                } else {
+                    console.error('Gagal memperbarui like:', response.status);
+                }
+            } catch (err) {
+                console.error('Error saat fetch like:', err);
+            } finally {
+                if (button) button.disabled = false;
+            }
+        });
+    });
+});
+</script>
+{% endblock script %}

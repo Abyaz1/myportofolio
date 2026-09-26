@@ -1,14 +1,20 @@
 from django.contrib import messages
 from django.core import serializers
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.contrib.auth import login, logout
+from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+import datetime
+from django.contrib.auth.decorators import login_required 
+from django.core.exceptions import PermissionDenied        
 
 from main.forms import EducationForm, ExperienceForm, MadingForm
 from main.models import Education, Experience, Mading
 
 
 def show_main(request):
+    last_login = request.COOKIES.get('last_login', 'Belum ada sesi login / Cookie tidak ditemukan')
     mading_list = Mading.objects.all().order_by("-created_at")
     mading_form = MadingForm()
     context = {
@@ -21,6 +27,7 @@ def show_main(request):
         ),
         "mading_list": mading_list,
         "mading_form": mading_form,
+        "last_login": last_login,
     }
     return render(request, "index.html", context)
 
@@ -51,8 +58,10 @@ def show_education(request):
     }
     return render(request, "education.html", context)
 
-
+@login_required(login_url="/login/")
 def create_education(request):
+    if not request.user.is_superuser:
+        raise PermissionDenied
     form = EducationForm(request.POST or None)
 
     if request.method == "POST" and form.is_valid():
@@ -66,8 +75,10 @@ def create_education(request):
     }
     return render(request, "education_form.html", context)
 
-
+@login_required(login_url="/login/")
 def delete_education(request, education_id):
+    if not request.user.is_superuser:
+        raise PermissionDenied
     education = get_object_or_404(Education, pk=education_id)
 
     if request.method == "POST":
@@ -77,8 +88,10 @@ def delete_education(request, education_id):
 
     return redirect("main:show_education")
 
-
+@login_required(login_url="/login/")
 def edit_education(request, education_id):
+    if not request.user.is_superuser:
+        raise PermissionDenied
     education = get_object_or_404(Education, pk=education_id)
     form = EducationForm(request.POST or None, instance=education)
 
@@ -94,8 +107,10 @@ def edit_education(request, education_id):
     }
     return render(request, "education_edit_form.html", context)
 
-
+@login_required(login_url="/login/")
 def create_experience(request):
+    if not request.user.is_superuser:
+        raise PermissionDenied
     form = ExperienceForm(request.POST or None)
 
     if request.method == "POST" and form.is_valid():
@@ -109,8 +124,10 @@ def create_experience(request):
     }
     return render(request, "experience_form.html", context)
 
-
+@login_required(login_url="/login/")
 def edit_experience(request, experience_id):
+    if not request.user.is_superuser:
+        raise PermissionDenied
     experience = get_object_or_404(Experience, pk=experience_id)
     form = ExperienceForm(request.POST or None, instance=experience)
 
@@ -127,7 +144,6 @@ def edit_experience(request, experience_id):
     return render(request, "experience_edit_form.html", context)
 
 
-
 def get_experience_json(request):
     title_query = request.GET.get("title", "").strip()
     experiences = Experience.objects.all()
@@ -135,11 +151,21 @@ def get_experience_json(request):
     if title_query:
         experiences = experiences.filter(title__icontains=title_query)
 
-    experiences_json = serializers.serialize("json", experiences)
+    experiences_json = serializers.serialize(
+        "json",
+        experiences,
+        use_natural_foreign_keys=True,
+    )
     return HttpResponse(experiences_json, content_type="application/json")
 
 
+get_projects_json = get_experience_json
+
+
+@login_required(login_url="/login/")
 def delete_experience(request, experience_id):
+    if not request.user.is_superuser:
+        raise PermissionDenied
     experience = get_object_or_404(Experience, pk=experience_id)
 
     if request.method == "POST":
@@ -150,6 +176,20 @@ def delete_experience(request, experience_id):
     return redirect("main:show_experience")
 
 
+@login_required(login_url="/login/")
+def toggle_star(request, experience_id):
+    experience = get_object_or_404(Experience, pk=experience_id)
+
+    if request.method == "POST":
+        if request.user in experience.starred_by.all():
+            experience.starred_by.remove(request.user)
+        else:
+            experience.starred_by.add(request.user)
+
+    return redirect("main:show_experience")
+
+
+@login_required(login_url="/login/")
 def create_mading(request):
     form = MadingForm(request.POST or None)
 
@@ -166,6 +206,8 @@ def increase_mading(request, mading_id):
     if request.method == "POST":
         mading.likes += 1
         mading.save()
+        if request.headers.get("x-requested-with") == "XMLHttpRequest" or "application/json" in request.headers.get("Accept", ""):
+            return JsonResponse({"status": "success", "likes": mading.likes})
 
     return redirect(reverse("main:show_main") + f"#mading-{mading.id}")
 
@@ -177,10 +219,12 @@ def decrease_mading(request, mading_id):
         if mading.likes > 0:
             mading.likes -= 1
             mading.save()
+        if request.headers.get("x-requested-with") == "XMLHttpRequest" or "application/json" in request.headers.get("Accept", ""):
+            return JsonResponse({"status": "success", "likes": mading.likes})
 
     return redirect(reverse("main:show_main") + f"#mading-{mading.id}")
 
-
+@login_required(login_url="/login/")
 def delete_mading(request, mading_id):
     mading = get_object_or_404(Mading, pk=mading_id)
 
@@ -190,5 +234,41 @@ def delete_mading(request, mading_id):
 
     return redirect(reverse("main:show_main") + "#mading")
 
+def register(request):
+    form = UserCreationForm(request.POST or None)
 
-
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Akun berhasil dibuat. Silakan login.")
+        return redirect("main:login")
+
+    context = {
+        "name": "Burhan",
+        "form": form,
+    }
+    return render(request, "register.html", context)
+
+def login_user(request):
+    form = AuthenticationForm(request, data=request.POST or None)
+
+    if request.method == "POST" and form.is_valid():
+        user = form.get_user()
+        login(request, user)
+        response = redirect("main:show_main")
+        response.set_cookie('last_login', datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+        return response
+
+    context = {
+        "name": "Burhan",
+        "form": form,
+    }
+    return render(request, "login.html", context)
+
+def logout_user(request):
+    if request.method == "POST":
+        logout(request)
+        response = redirect("main:show_main")
+        response.delete_cookie('last_login')
+        return response
+    return redirect("main:show_main")
+

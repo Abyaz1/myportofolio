@@ -7,9 +7,11 @@
         <div class="container">
             <p class="section-kicker">Pendidikan saya sejauh ini</p>
             <h1>Education</h1>
+            {% if user.is_superuser %}
             <div style="margin-bottom: 1.5rem;">
                 <a href="{% url 'main:create_education' %}" class="button">Tambah Pendidikan</a>
             </div>
+            {% endif %}
 
             <div class="education-grid">
                 {% for education in education_list %}
@@ -25,12 +27,14 @@
                             <p class="education-status">Selesai</p>
                         {% endif %}
 
+                        {% if user.is_superuser %}
                         <div class="project-card-actions">
                             <div class="project-actions">
                                 <a href="{% url 'main:edit_education' education.id %}" class="button button-secondary">Ubah</a>
                                 {% include "components/education_delete_modal.html" with education=education %}
                             </div>
                         </div>
+                        {% endif %}
                     </article>
                 {% empty %}
                     <p class="empty-state">

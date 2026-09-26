@@ -19,6 +19,16 @@
             <a href="{% url 'main:show_experience' %}">Experience</a>
             <a href="{% url 'main:show_education' %}">Education</a>
             <a href="{% url 'main:show_main' %}#mading">Mading</a>
+            {% if user.is_authenticated %}
+            <span class="nav-user">{{ user.username }}</span>
+            <form method="post" action="{% url 'main:logout' %}" class="logout-form">
+                {% csrf_token %}
+                <button type="submit" class="logout-button">Logout</button>
+            </form>
+        {% else %}
+            <a href="{% url 'main:login' %}">Login</a>
+            <a href="{% url 'main:register' %}">Register</a>
+        {% endif %}
         </nav>
     </div>
   </header>
@@ -29,5 +39,6 @@
             <p>&copy; 2026 {{ name }}. Fakultas Ilmu Komputer, Universitas Indonesia.</p>
         </div>
     </footer>
+    {% block script %}{% endblock script %}
 </body>
 </html>

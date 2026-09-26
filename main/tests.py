@@ -7,6 +7,12 @@ from main.models import Education, Experience, Mading
 
 class MainTest(TestCase):
     def setUp(self):
+        from django.contrib.auth.models import User
+        self.superuser = User.objects.create_superuser(
+            username="admin",
+            password="adminpassword",
+            email="admin@example.com",
+        )
         self.experience = Experience.objects.create(
             title="Asisten Dosen PBP",
             description="Membantu mahasiswa memahami pengembangan web.",
@@ -112,6 +118,7 @@ class MainTest(TestCase):
         self.assertTrue(form.is_valid())
 
     def test_create_education_view(self):
+        self.client.login(username="admin", password="adminpassword")
         response = self.client.get(reverse("main:create_education"))
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "education_form.html")
@@ -124,15 +131,24 @@ class MainTest(TestCase):
         self.assertTrue(Education.objects.filter(institution="SMA Negeri 1").exists())
 
     def test_get_experience_json(self):
+        import json
+        self.experience.starred_by.add(self.superuser)
+
         response = self.client.get(reverse("main:get_experience_json"))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "application/json")
+        data = json.loads(response.content.decode("utf-8"))
+        self.assertEqual(data[0]["fields"]["starred_by"], [["admin"]])
+
+        proj_response = self.client.get(reverse("main:get_projects_json"))
+        self.assertEqual(proj_response.status_code, 200)
 
         response_filter = self.client.get(reverse("main:get_experience_json") + "?title=Asisten")
         self.assertEqual(response_filter.status_code, 200)
         self.assertContains(response_filter, "Asisten Dosen PBP")
 
     def test_delete_experience(self):
+        self.client.login(username="admin", password="adminpassword")
         post_response = self.client.post(
             reverse("main:delete_experience", kwargs={"experience_id": self.experience.id})
         )
@@ -140,6 +156,7 @@ class MainTest(TestCase):
         self.assertFalse(Experience.objects.filter(id=self.experience.id).exists())
 
     def test_delete_education(self):
+        self.client.login(username="admin", password="adminpassword")
         post_response = self.client.post(
             reverse("main:delete_education", kwargs={"education_id": self.education.id})
         )
@@ -147,6 +164,7 @@ class MainTest(TestCase):
         self.assertFalse(Education.objects.filter(id=self.education.id).exists())
 
     def test_create_experience_view(self):
+        self.client.login(username="admin", password="adminpassword")
         response = self.client.get(reverse("main:create_experience"))
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "experience_form.html")
@@ -161,6 +179,7 @@ class MainTest(TestCase):
         self.assertTrue(Experience.objects.filter(title="Software Engineer Intern").exists())
 
     def test_edit_experience_view(self):
+        self.client.login(username="admin", password="adminpassword")
         response = self.client.get(
             reverse("main:edit_experience", kwargs={"experience_id": self.experience.id})
         )
@@ -181,6 +200,7 @@ class MainTest(TestCase):
         self.assertEqual(self.experience.title, "Lead Assistant PBP")
 
     def test_edit_education_view(self):
+        self.client.login(username="admin", password="adminpassword")
         response = self.client.get(
             reverse("main:edit_education", kwargs={"education_id": self.education.id})
         )
@@ -200,6 +220,7 @@ class MainTest(TestCase):
 
 
     def test_mading_crud(self):
+        self.client.login(username="admin", password="adminpassword")
         mading = Mading.objects.create(
             name="Pengunjung",
             message="Keren banget portofolionya!",
@@ -229,6 +250,21 @@ class MainTest(TestCase):
         mading.refresh_from_db()
         self.assertEqual(mading.likes, 0)
 
+        # Uji pemanggilan AJAX (Fetch) dengan header XMLHttpRequest
+        ajax_inc = self.client.post(
+            reverse("main:increase_mading", kwargs={"mading_id": mading.id}),
+            headers={"x-requested-with": "XMLHttpRequest"}
+        )
+        self.assertEqual(ajax_inc.status_code, 200)
+        self.assertEqual(ajax_inc.json(), {"status": "success", "likes": 1})
+
+        ajax_dec = self.client.post(
+            reverse("main:decrease_mading", kwargs={"mading_id": mading.id}),
+            headers={"x-requested-with": "XMLHttpRequest"}
+        )
+        self.assertEqual(ajax_dec.status_code, 200)
+        self.assertEqual(ajax_dec.json(), {"status": "success", "likes": 0})
+
         create_response = self.client.post(reverse("main:create_mading"), data={
             "name": "Budi",
             "message": "Semangat belajarnya!",
@@ -239,3 +275,82 @@ class MainTest(TestCase):
             reverse("main:delete_mading", kwargs={"mading_id": mading.id})
         )
         self.assertFalse(Mading.objects.filter(id=mading.id).exists())
+
+    def test_logout_user_post(self):
+        from django.contrib.auth.models import User
+        user = User.objects.create_user(username="testuser", password="secretpassword")
+        self.client.login(username="testuser", password="secretpassword")
+
+        # Pastikan user terautentikasi dan halaman menampilkan tombol/form logout
+        main_resp = self.client.get(reverse("main:show_main"))
+        self.assertContains(main_resp, 'action="' + reverse("main:logout") + '"')
+        self.assertContains(main_resp, 'Logout')
+
+        # Logout via POST
+        logout_resp = self.client.post(reverse("main:logout"))
+        self.assertRedirects(logout_resp, reverse("main:show_main"))
+
+        # Pastikan user sudah tidak terautentikasi
+        after_resp = self.client.get(reverse("main:show_main"))
+        self.assertContains(after_resp, reverse("main:login"))
+        self.assertNotContains(after_resp, "testuser")
+
+    def test_buttons_hidden_for_anonymous_and_visible_for_superuser(self):
+        # 1. Pengunjung anonim (belum login) tidak boleh melihat tombol Tambah & Hapus/Ubah
+        exp_resp = self.client.get(reverse("main:show_experience"))
+        self.assertEqual(exp_resp.status_code, 200)
+        self.assertNotContains(exp_resp, "Tambah Experience")
+        self.assertNotContains(exp_resp, reverse("main:create_experience"))
+        self.assertNotContains(exp_resp, "delete-experience-")
+
+        edu_resp = self.client.get(reverse("main:show_education"))
+        self.assertEqual(edu_resp.status_code, 200)
+        self.assertNotContains(edu_resp, "Tambah Pendidikan")
+        self.assertNotContains(edu_resp, reverse("main:create_education"))
+        self.assertNotContains(edu_resp, "delete-education-")
+
+        # 2. Superuser harus melihat tombol Tambah & Hapus/Ubah
+        self.client.login(username="admin", password="adminpassword")
+
+        exp_admin_resp = self.client.get(reverse("main:show_experience"))
+        self.assertContains(exp_admin_resp, "Tambah Experience")
+        self.assertContains(exp_admin_resp, reverse("main:create_experience"))
+        self.assertContains(exp_admin_resp, f"delete-experience-{self.experience.id}")
+
+        edu_admin_resp = self.client.get(reverse("main:show_education"))
+        self.assertContains(edu_admin_resp, "Tambah Pendidikan")
+        self.assertContains(edu_admin_resp, reverse("main:create_education"))
+        self.assertContains(edu_admin_resp, f"delete-education-{self.education.id}")
+
+    def test_toggle_star_experience(self):
+        from django.contrib.auth.models import User
+        regular_user = User.objects.create_user(username="regularuser", password="password123")
+
+        # 1. Anonim klik star akan di-redirect ke login
+        anon_star_resp = self.client.post(
+            reverse("main:toggle_star", kwargs={"experience_id": self.experience.id})
+        )
+        self.assertEqual(anon_star_resp.status_code, 302)
+        self.assertIn(reverse("main:login"), anon_star_resp.url)
+        self.assertEqual(self.experience.starred_by.count(), 0)
+
+        # 2. Pengguna login memberi star
+        self.client.login(username="regularuser", password="password123")
+        star_resp = self.client.post(
+            reverse("main:toggle_star", kwargs={"experience_id": self.experience.id})
+        )
+        self.assertRedirects(star_resp, reverse("main:show_experience"))
+        self.assertEqual(self.experience.starred_by.count(), 1)
+        self.assertIn(regular_user, self.experience.starred_by.all())
+
+        page_resp = self.client.get(reverse("main:show_experience"))
+        self.assertContains(page_resp, "is-starred")
+        self.assertContains(page_resp, "Unstar")
+
+        # 3. Pengguna login klik lagi untuk unstar
+        unstar_resp = self.client.post(
+            reverse("main:toggle_star", kwargs={"experience_id": self.experience.id})
+        )
+        self.assertRedirects(unstar_resp, reverse("main:show_experience"))
+        self.assertEqual(self.experience.starred_by.count(), 0)
+        self.assertNotIn(regular_user, self.experience.starred_by.all())
