@@ -1,33 +1,43 @@
 {% extends 'base.html' %}
 {% load static %}
 
+{% block meta %}
+    <title>Education - {{ name }}</title>
+{% endblock meta %}
+
 {% block content %}
 <main>
     <section class="education-section" id="education">
         <div class="container">
             <p class="section-kicker">Pendidikan saya sejauh ini</p>
-            <h1>Education</h1>
-            {% if user.is_superuser %}
-            <div style="margin-bottom: 1.5rem;">
-                <a href="{% url 'main:create_education' %}" class="button">Tambah Pendidikan</a>
+            <div class="project-header">
+                <h1 class="section-title">Education</h1>
+                {% if user.is_superuser %}
+                    <a href="{% url 'main:create_education' %}" class="button project-add-button">
+                        <span aria-hidden="true">+</span>
+                        Tambah Pendidikan
+                    </a>
+                {% endif %}
             </div>
-            {% endif %}
 
             <div class="education-grid">
                 {% for education in education_list %}
                     <article class="education-card">
-                        <h2>{{ education.institution }}</h2>
-                        <p class="education-description">
-                            {{ education.Activity }}
-                        </p>
-
-                        {% if education.is_ongoing %}
-                            <p class="education-status">Sedang berlangsung</p>
-                        {% else %}
-                            <p class="education-status">Selesai</p>
-                        {% endif %}
+                        <div>
+                            <span class="education-category">Akademik</span>
+                            <h2>{{ education.institution }}</h2>
+                            <p class="education-description">
+                                {{ education.Activity }}
+                            </p>
+                        </div>
 
                         <div class="project-card-actions">
+                            {% if education.is_ongoing %}
+                                <p class="education-status">Sedang berlangsung</p>
+                            {% else %}
+                                <p class="education-status">Selesai</p>
+                            {% endif %}
+
                             <div class="project-actions">
                                 {% include "components/education_star.html" with education=education %}
                                 {% if user.is_superuser or is_editor %}

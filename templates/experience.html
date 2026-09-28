@@ -11,7 +11,7 @@
         <div class="container">
             <p class="section-kicker">Perjalanan saya sejauh ini</p>
             <div class="project-header">
-                <h1>Experience</h1>
+                <h1 class="section-title">Experience</h1>
                 {% if user.is_superuser %}
                     <a href="{% url 'main:create_experience' %}"
                        class="button project-add-button">
@@ -34,26 +34,28 @@
             <div class="experience-grid">
                 {% for experience in experience_list %}
                     <article class="experience-card">
-                        {% if experience.thumbnail %}
-                            <img src="{{ experience.thumbnail }}"
-                                 alt="Gambar {{ experience.title }}"
-                                 class="project-image">
-                        {% endif %}
-                        <span class="experience-category">
-                            {{ experience.get_category_display }}
-                        </span>
-                        <h2>{{ experience.title }}</h2>
-                        <p class="experience-description">
-                            {{ experience.description }}
-                        </p>
-
-                        {% if experience.is_ongoing %}
-                            <p class="experience-status">Sedang berlangsung</p>
-                        {% else %}
-                            <p class="experience-status">Selesai</p>
-                        {% endif %}
+                        <div>
+                            {% if experience.thumbnail %}
+                                <img src="{{ experience.thumbnail }}"
+                                     alt="Gambar {{ experience.title }}"
+                                     class="project-image">
+                            {% endif %}
+                            <span class="experience-category">
+                                {{ experience.get_category_display }}
+                            </span>
+                            <h2>{{ experience.title }}</h2>
+                            <p class="experience-description">
+                                {{ experience.description }}
+                            </p>
+                        </div>
 
                         <div class="project-card-actions">
+                            {% if experience.is_ongoing %}
+                                <p class="experience-status">Sedang berlangsung</p>
+                            {% else %}
+                                <p class="experience-status">Selesai</p>
+                            {% endif %}
+
                             <div class="project-actions">
                                 {% include "components/experience_star.html" with experience=experience %}
                                 {% if user.is_superuser or is_editor %}
