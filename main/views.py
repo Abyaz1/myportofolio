@@ -13,6 +13,14 @@ from main.forms import EducationForm, ExperienceForm, MadingForm
 from main.models import Education, Experience, Mading
 
 
+def check_is_editor(user):
+    return user.is_authenticated and (
+        user.groups.filter(name="Editor").exists()
+        or user.has_perm("main.change_experience")
+        or user.has_perm("main.change_education")
+    )
+
+
 def show_main(request):
     last_login = request.COOKIES.get('last_login', 'Belum ada sesi login / Cookie tidak ditemukan')
     mading_list = Mading.objects.all().order_by("-created_at")
@@ -47,6 +55,7 @@ def show_experience(request):
         "name": "M Naufal Abyaz Bawono",
         "experience_list": experiences,
         "title_query": title_query,
+        "is_editor": check_is_editor(request.user),
     }
     return render(request, "experience.html", context)
 
@@ -55,6 +64,7 @@ def show_education(request):
     context = {
         "name": "M Naufal Abyaz Bawono",
         "education_list": Education.objects.all(),
+        "is_editor": check_is_editor(request.user),
     }
     return render(request, "education.html", context)
 
@@ -90,7 +100,7 @@ def delete_education(request, education_id):
 
 @login_required(login_url="/login/")
 def edit_education(request, education_id):
-    if not request.user.is_superuser:
+    if not (request.user.is_superuser or check_is_editor(request.user)):
         raise PermissionDenied
     education = get_object_or_404(Education, pk=education_id)
     form = EducationForm(request.POST or None, instance=education)
@@ -126,7 +136,7 @@ def create_experience(request):
 
 @login_required(login_url="/login/")
 def edit_experience(request, experience_id):
-    if not request.user.is_superuser:
+    if not (request.user.is_superuser or check_is_editor(request.user)):
         raise PermissionDenied
     experience = get_object_or_404(Experience, pk=experience_id)
     form = ExperienceForm(request.POST or None, instance=experience)

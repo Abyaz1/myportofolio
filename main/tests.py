@@ -354,3 +354,73 @@ class MainTest(TestCase):
         self.assertRedirects(unstar_resp, reverse("main:show_experience"))
         self.assertEqual(self.experience.starred_by.count(), 0)
         self.assertNotIn(regular_user, self.experience.starred_by.all())
+
+    def test_authorization_four_roles(self):
+        from django.contrib.auth.models import User, Group
+        editor_group, _ = Group.objects.get_or_create(name="Editor")
+        editor_user = User.objects.create_user(username="editoruser", password="password123")
+        editor_user.groups.add(editor_group)
+
+        regular_user = User.objects.create_user(username="normaluser", password="password123")
+
+        edit_exp_url = reverse("main:edit_experience", kwargs={"experience_id": self.experience.id})
+        create_exp_url = reverse("main:create_experience")
+        delete_exp_url = reverse("main:delete_experience", kwargs={"experience_id": self.experience.id})
+
+        # --- Peran 1: Pengunjung tanpa login (Guest) ---
+        self.client.logout()
+        # Dapat membaca
+        self.assertEqual(self.client.get(reverse("main:show_experience")).status_code, 200)
+        # Akses aksi diarahkan ke login
+        self.assertRedirects(self.client.get(create_exp_url), f'/login/?next={create_exp_url}')
+        self.assertRedirects(self.client.get(edit_exp_url), f'/login/?next={edit_exp_url}')
+        self.assertRedirects(self.client.post(delete_exp_url), f'/login/?next={delete_exp_url}')
+        # UI: tidak ada tombol aksi
+        guest_page = self.client.get(reverse("main:show_experience"))
+        self.assertNotContains(guest_page, "Tambah Experience")
+        self.assertNotContains(guest_page, "Ubah")
+        self.assertNotContains(guest_page, f"delete-experience-{self.experience.id}")
+
+        # --- Peran 2: Pengguna biasa (Regular User) ---
+        self.client.login(username="normaluser", password="password123")
+        # Dapat membaca & memberi star
+        self.assertEqual(self.client.get(reverse("main:show_experience")).status_code, 200)
+        self.assertEqual(self.client.post(reverse("main:toggle_star", kwargs={"experience_id": self.experience.id})).status_code, 302)
+        # Tidak dapat membuat, mengubah, atau menghapus -> 403 Forbidden
+        self.assertEqual(self.client.get(create_exp_url).status_code, 403)
+        self.assertEqual(self.client.get(edit_exp_url).status_code, 403)
+        self.assertEqual(self.client.post(delete_exp_url).status_code, 403)
+        # UI: melihat star, tetapi tidak melihat tombol Tambah, Ubah, maupun Hapus
+        normal_page = self.client.get(reverse("main:show_experience"))
+        self.assertContains(normal_page, "button-star")
+        self.assertNotContains(normal_page, "Tambah Experience")
+        self.assertNotContains(normal_page, "Ubah")
+        self.assertNotContains(normal_page, f"delete-experience-{self.experience.id}")
+
+        # --- Peran 3: Editor ---
+        self.client.login(username="editoruser", password="password123")
+        # Dapat membaca & memberi star
+        self.assertEqual(self.client.get(reverse("main:show_experience")).status_code, 200)
+        # DAPAT mengubah data -> 200 OK
+        self.assertEqual(self.client.get(edit_exp_url).status_code, 200)
+        # TIDAK DAPAT membuat atau menghapus -> 403 Forbidden
+        self.assertEqual(self.client.get(create_exp_url).status_code, 403)
+        self.assertEqual(self.client.post(delete_exp_url).status_code, 403)
+        # UI: melihat tombol Ubah & star, TETAPI TIDAK melihat tombol Tambah atau Hapus
+        editor_page = self.client.get(reverse("main:show_experience"))
+        self.assertContains(editor_page, "button-star")
+        self.assertContains(editor_page, "Ubah")
+        self.assertNotContains(editor_page, "Tambah Experience")
+        self.assertNotContains(editor_page, f"delete-experience-{self.experience.id}")
+
+        # --- Peran 4: Pemilik Portofolio (Superuser) ---
+        self.client.login(username="admin", password="adminpassword")
+        # DAPAT membuat, mengubah, menghapus
+        self.assertEqual(self.client.get(create_exp_url).status_code, 200)
+        self.assertEqual(self.client.get(edit_exp_url).status_code, 200)
+        # UI: melihat SEMUA tombol (Tambah, Ubah, Hapus, Star)
+        admin_page = self.client.get(reverse("main:show_experience"))
+        self.assertContains(admin_page, "button-star")
+        self.assertContains(admin_page, "Tambah Experience")
+        self.assertContains(admin_page, "Ubah")
+        self.assertContains(admin_page, f"delete-experience-{self.experience.id}")
