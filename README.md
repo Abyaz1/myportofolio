@@ -184,6 +184,11 @@ Progres pengembangan proyek portofolio pribadi berdasarkan riwayat commit dan ri
 - Keamanan CSRF & Serialisasi Data: Menerapkan tag `{% csrf_token %}` pada form POST dan menyajikan data JSON menggunakan serialisasi Django ORM.
 - Dokumentasi & Refleksi: Menuliskan jawaban refleksi tugas 3 dan memperbarui dokumentasi proyek.
 
+### Minggu 4 - Tutorial 4: Autentikasi, Otorisasi, & Manajemen Hak Akses
+- Autentikasi Pengguna: Mengimplementasikan fitur pendaftaran akun (`register`), masuk (`login`), dan keluar (`logout`) menggunakan sistem autentikasi bawaan Django dan manajemen session/cookies.
+- Hak Akses Peran (Role-Based Access Control): Menerapkan pembatasan hak akses berbasis peran (seperti peran Editor) untuk tindakan ubah dan hapus pada data portofolio.
+- Fitur Edit Mading & Star Education & Experience: Menambahkan fitur edit pada mading pesan serta penandaan bintang (*star*) pada kartu data pendidikan (`Education`) dan pengalaman (`Experience`).
+
 
 ## AI Disclosure
 
