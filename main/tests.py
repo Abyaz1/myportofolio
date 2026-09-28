@@ -271,6 +271,21 @@ class MainTest(TestCase):
         })
         self.assertTrue(Mading.objects.filter(name="Budi").exists())
 
+        # Uji GET & POST edit_mading
+        edit_mading_url = reverse("main:edit_mading", kwargs={"mading_id": mading.id})
+        get_edit_resp = self.client.get(edit_mading_url)
+        self.assertEqual(get_edit_resp.status_code, 200)
+        self.assertTemplateUsed(get_edit_resp, "mading_edit_form.html")
+
+        post_edit_resp = self.client.post(edit_mading_url, data={
+            "name": "Pengunjung Diedit",
+            "message": "Pesan sudah diperbarui!",
+        })
+        self.assertRedirects(post_edit_resp, reverse("main:show_main") + f"#mading-{mading.id}")
+        mading.refresh_from_db()
+        self.assertEqual(mading.name, "Pengunjung Diedit")
+        self.assertEqual(mading.message, "Pesan sudah diperbarui!")
+
         del_response = self.client.post(
             reverse("main:delete_mading", kwargs={"mading_id": mading.id})
         )
@@ -424,3 +439,36 @@ class MainTest(TestCase):
         self.assertContains(admin_page, "Tambah Experience")
         self.assertContains(admin_page, "Ubah")
         self.assertContains(admin_page, f"delete-experience-{self.experience.id}")
+
+    def test_toggle_star_education(self):
+        from django.contrib.auth.models import User
+        regular_user = User.objects.create_user(username="edutestuser", password="password123")
+
+        # 1. Anonim klik star diarahkan ke login
+        anon_star_resp = self.client.post(
+            reverse("main:toggle_star_education", kwargs={"education_id": self.education.id})
+        )
+        self.assertEqual(anon_star_resp.status_code, 302)
+        self.assertIn(reverse("main:login"), anon_star_resp.url)
+        self.assertEqual(self.education.starred_by.count(), 0)
+
+        # 2. Pengguna login memberi star
+        self.client.login(username="edutestuser", password="password123")
+        star_resp = self.client.post(
+            reverse("main:toggle_star_education", kwargs={"education_id": self.education.id})
+        )
+        self.assertRedirects(star_resp, reverse("main:show_education"))
+        self.assertEqual(self.education.starred_by.count(), 1)
+        self.assertIn(regular_user, self.education.starred_by.all())
+
+        page_resp = self.client.get(reverse("main:show_education"))
+        self.assertContains(page_resp, "is-starred")
+        self.assertContains(page_resp, "Unstar")
+
+        # 3. Pengguna login membatalkan star
+        unstar_resp = self.client.post(
+            reverse("main:toggle_star_education", kwargs={"education_id": self.education.id})
+        )
+        self.assertRedirects(unstar_resp, reverse("main:show_education"))
+        self.assertEqual(self.education.starred_by.count(), 0)
+        self.assertNotIn(regular_user, self.education.starred_by.all())

@@ -9,6 +9,7 @@ from main.views import (
     delete_mading,
     edit_education,
     edit_experience,
+    edit_mading,
     get_experience_json,
     get_projects_json,
     increase_mading,
@@ -19,6 +20,7 @@ from main.views import (
     show_experience,
     show_main,
     toggle_star,
+    toggle_star_education,
 )
 
 app_name = 'main'
@@ -34,11 +36,13 @@ urlpatterns = [
     path('education/create/', create_education, name='create_education'),
     path('education/<uuid:education_id>/edit/', edit_education, name='edit_education'),
     path('education/<uuid:education_id>/delete/', delete_education, name='delete_education'),
+    path('education/<uuid:education_id>/star/', toggle_star_education, name='toggle_star_education'),
     path('api/experiences/', get_experience_json, name='get_experience_json'),
     path('api/projects/', get_projects_json, name='get_projects_json'),
     path('mading/create/', create_mading, name='create_mading'),
     path('mading/<uuid:mading_id>/increase/', increase_mading, name='increase_mading'),
     path('mading/<uuid:mading_id>/decrease/', decrease_mading, name='decrease_mading'),
+    path('mading/<uuid:mading_id>/edit/', edit_mading, name='edit_mading'),
     path('mading/<uuid:mading_id>/delete/', delete_mading, name='delete_mading'),
     path("register/", register, name="register"),
     path("login/", login_user, name="login"),

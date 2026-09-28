@@ -126,10 +126,17 @@
                                 </div>
                             </div>
 
-                            <form method="post" action="{% url 'main:delete_mading' item.id %}" style="display:inline;">
-                                {% csrf_token %}
-                                <button type="submit" class="button button-danger button-sm" onclick="return confirm('Apakah Anda yakin ingin menghapus pesan ini?')">Hapus</button>
-                            </form>
+                            <div class="mading-actions" style="display: flex; gap: 0.5rem; align-items: center;">
+                                {% if user.is_superuser or is_editor %}
+                                    <a href="{% url 'main:edit_mading' item.id %}" class="button button-secondary button-sm">Ubah</a>
+                                {% endif %}
+                                {% if user.is_superuser %}
+                                    <form method="post" action="{% url 'main:delete_mading' item.id %}" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="button button-danger button-sm" onclick="return confirm('Apakah Anda yakin ingin menghapus pesan ini?')">Hapus</button>
+                                    </form>
+                                {% endif %}
+                            </div>
                         </div>
                     </article>
                 {% empty %}

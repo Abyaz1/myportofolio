@@ -36,6 +36,7 @@ def show_main(request):
         "mading_list": mading_list,
         "mading_form": mading_form,
         "last_login": last_login,
+        "is_editor": check_is_editor(request.user),
     }
     return render(request, "index.html", context)
 
@@ -200,6 +201,19 @@ def toggle_star(request, experience_id):
 
 
 @login_required(login_url="/login/")
+def toggle_star_education(request, education_id):
+    education = get_object_or_404(Education, pk=education_id)
+
+    if request.method == "POST":
+        if request.user in education.starred_by.all():
+            education.starred_by.remove(request.user)
+        else:
+            education.starred_by.add(request.user)
+
+    return redirect("main:show_education")
+
+
+@login_required(login_url="/login/")
 def create_mading(request):
     form = MadingForm(request.POST or None)
 
@@ -233,6 +247,26 @@ def decrease_mading(request, mading_id):
             return JsonResponse({"status": "success", "likes": mading.likes})
 
     return redirect(reverse("main:show_main") + f"#mading-{mading.id}")
+
+@login_required(login_url="/login/")
+def edit_mading(request, mading_id):
+    if not (request.user.is_superuser or check_is_editor(request.user)):
+        raise PermissionDenied
+    mading = get_object_or_404(Mading, pk=mading_id)
+    form = MadingForm(request.POST or None, instance=mading)
+
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Pesan mading berhasil diperbarui!")
+        return redirect(reverse("main:show_main") + f"#mading-{mading.id}")
+
+    context = {
+        "name": "M Naufal Abyaz Bawono",
+        "form": form,
+        "mading": mading,
+    }
+    return render(request, "mading_edit_form.html", context)
+
 
 @login_required(login_url="/login/")
 def delete_mading(request, mading_id):
