@@ -23,6 +23,7 @@ ENV/
 # IDE & Editors
 .idea/
 .vscode/
+.cph/
 *.swp
 *.swo
 

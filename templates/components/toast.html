@@ -1,0 +1,34 @@
+{% load static %}
+<div id="toast-component" class="toast-component toast-hidden" popover="manual">
+    <div class="toast-content">
+        <h3 id="toast-title" class="toast-title">This is a Sample Title</h3>
+        <p id="toast-message" class="toast-message">This is a Sample Message</p>
+    </div>
+</div>
+<script src="{% static 'js/toast.js' %}"></script>
+
+{% if messages %}
+    <div id="toast-messages-data" style="display: none;">
+        {% for message in messages %}
+            <span class="toast-msg-item"
+                  data-message="{{ message }}"
+                  data-type="{% if 'error' in message.tags %}error{% elif 'success' in message.tags %}success{% else %}normal{% endif %}"
+                  data-title="{% if 'error' in message.tags %}Gagal{% elif 'success' in message.tags %}Berhasil{% else %}Notifikasi{% endif %}">
+            </span>
+        {% endfor %}
+    </div>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const items = document.querySelectorAll("#toast-messages-data .toast-msg-item");
+            items.forEach(function (el, index) {
+                setTimeout(function () {
+                    showToast(
+                        el.getAttribute("data-title"),
+                        el.getAttribute("data-message"),
+                        el.getAttribute("data-type")
+                    );
+                }, index * 3200);
+            });
+        });
+    </script>
+{% endif %}

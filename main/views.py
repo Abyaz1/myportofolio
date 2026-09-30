@@ -1,13 +1,15 @@
+import datetime
+
 from django.contrib import messages
+from django.contrib.auth import login, logout
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.core import serializers
+from django.core.exceptions import PermissionDenied
+from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.contrib.auth import login, logout
-from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
-import datetime
-from django.contrib.auth.decorators import login_required 
-from django.core.exceptions import PermissionDenied        
 
 from main.forms import EducationForm, ExperienceForm, MadingForm
 from main.models import Education, Experience, Mading
@@ -41,30 +43,35 @@ def show_main(request):
     return render(request, "index.html", context)
 
 
-
 def show_experience(request):
-    json_response = get_experience_json(request)
-
-    experiences = serializers.deserialize(
-        "json",
-        json_response.content.decode("utf-8"),
-    )
-    experiences = [experience.object for experience in experiences]
     title_query = request.GET.get("title", "").strip()
+    experiences = Experience.objects.all()
+    if title_query:
+        experiences = experiences.filter(title__icontains=title_query)
 
     context = {
         "name": "M Naufal Abyaz Bawono",
         "experience_list": experiences,
         "title_query": title_query,
+        "form": ExperienceForm(),
         "is_editor": check_is_editor(request.user),
     }
     return render(request, "experience.html", context)
 
 
 def show_education(request):
+    title_query = request.GET.get("title", "").strip()
+    educations = Education.objects.all()
+    if title_query:
+        educations = educations.filter(
+            Q(institution__icontains=title_query) | Q(Activity__icontains=title_query)
+        )
+
     context = {
         "name": "M Naufal Abyaz Bawono",
-        "education_list": Education.objects.all(),
+        "education_list": educations,
+        "title_query": title_query,
+        "form": EducationForm(),
         "is_editor": check_is_editor(request.user),
     }
     return render(request, "education.html", context)
@@ -73,6 +80,8 @@ def show_education(request):
 def create_education(request):
     if not request.user.is_superuser:
         raise PermissionDenied
+    if request.method == "POST" and (request.headers.get("x-requested-with") == "XMLHttpRequest" or "application/json" in request.headers.get("Accept", "")):
+        return create_education_ajax(request)
     form = EducationForm(request.POST or None)
 
     if request.method == "POST" and form.is_valid():
@@ -95,7 +104,6 @@ def delete_education(request, education_id):
     if request.method == "POST":
         education.delete()
         messages.success(request, "Pendidikan berhasil dihapus!")
-        return redirect("main:show_education")
 
     return redirect("main:show_education")
 
@@ -119,9 +127,55 @@ def edit_education(request, education_id):
     return render(request, "education_edit_form.html", context)
 
 @login_required(login_url="/login/")
+def create_experience_ajax(request):
+    if not request.user.is_superuser:
+        raise PermissionDenied
+    if request.method == "POST":
+        form = ExperienceForm(request.POST)
+        if form.is_valid():
+            experience = form.save()
+            return JsonResponse({
+                "status": "success",
+                "message": "Experience baru berhasil ditambahkan!",
+                "id": str(experience.id),
+            }, status=201)
+        else:
+            first_error = next(iter(form.errors.values()))[0] if form.errors else "Gagal menambahkan experience."
+            return JsonResponse({
+                "status": "error",
+                "message": first_error,
+                "errors": form.errors.get_json_data(),
+            }, status=400)
+    return JsonResponse({"status": "error", "message": "Metode tidak diizinkan."}, status=405)
+
+@login_required(login_url="/login/")
+def create_education_ajax(request):
+    if not request.user.is_superuser:
+        raise PermissionDenied
+    if request.method == "POST":
+        form = EducationForm(request.POST)
+        if form.is_valid():
+            education = form.save()
+            return JsonResponse({
+                "status": "success",
+                "message": "Pendidikan baru berhasil ditambahkan!",
+                "id": str(education.id),
+            }, status=201)
+        else:
+            first_error = next(iter(form.errors.values()))[0] if form.errors else "Gagal menambahkan pendidikan."
+            return JsonResponse({
+                "status": "error",
+                "message": first_error,
+                "errors": form.errors.get_json_data(),
+            }, status=400)
+    return JsonResponse({"status": "error", "message": "Metode tidak diizinkan."}, status=405)
+
+@login_required(login_url="/login/")
 def create_experience(request):
     if not request.user.is_superuser:
         raise PermissionDenied
+    if request.method == "POST" and (request.headers.get("x-requested-with") == "XMLHttpRequest" or "application/json" in request.headers.get("Accept", "")):
+        return create_experience_ajax(request)
     form = ExperienceForm(request.POST or None)
 
     if request.method == "POST" and form.is_valid():
@@ -170,7 +224,21 @@ def get_experience_json(request):
     return HttpResponse(experiences_json, content_type="application/json")
 
 
-get_projects_json = get_experience_json
+def get_education_json(request):
+    title_query = request.GET.get("title", "").strip()
+    educations = Education.objects.all()
+
+    if title_query:
+        educations = educations.filter(
+            Q(institution__icontains=title_query) | Q(Activity__icontains=title_query)
+        )
+
+    educations_json = serializers.serialize(
+        "json",
+        educations,
+        use_natural_foreign_keys=True,
+    )
+    return HttpResponse(educations_json, content_type="application/json")
 
 
 @login_required(login_url="/login/")
@@ -182,7 +250,6 @@ def delete_experience(request, experience_id):
     if request.method == "POST":
         experience.delete()
         messages.success(request, "Experience berhasil dihapus!")
-        return redirect("main:show_experience")
 
     return redirect("main:show_experience")
 

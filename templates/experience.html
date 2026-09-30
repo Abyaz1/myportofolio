@@ -13,25 +13,39 @@
             <div class="project-header">
                 <h1 class="section-title">Experience</h1>
                 {% if user.is_superuser %}
-                    <a href="{% url 'main:create_experience' %}"
-                       class="button project-add-button">
+                    <button type="button"
+                            class="button project-add-button"
+                            popovertarget="add-experience-modal">
                         <span aria-hidden="true">+</span>
                         Tambah Experience
-                    </a>
+                    </button>
                 {% endif %}
             </div>
             <form method="get"
                   action="{% url 'main:show_experience' %}"
-                  class="project-search">
+                  class="project-search"
+                  id="experience-search-form">
                 <input type="search"
                        name="title"
+                       id="experience-search-input"
                        value="{{ title_query }}"
                        placeholder="Cari berdasarkan nama experience"
                        class="project-search__input"
                        aria-label="Cari berdasarkan nama experience">
                 <button type="submit" class="button">Cari</button>
             </form>
-            <div class="experience-grid">
+
+            <div id="experience-loading-state" class="empty-state hide">
+                <p>Memuat data experience...</p>
+            </div>
+            <div id="experience-error-state" class="empty-state hide">
+                <p>Terjadi kesalahan saat memuat data. Silakan coba lagi.</p>
+            </div>
+            <div id="experience-empty-state" class="empty-state hide">
+                <p>Belum ada pengalaman yang ditambahkan.</p>
+            </div>
+
+            <div id="experience-grid" class="experience-grid">
                 {% for experience in experience_list %}
                     <article class="experience-card">
                         <div>
@@ -78,4 +92,19 @@
         </div>
     </section>
 </main>
+{% if user.is_superuser %}
+    {% include "components/experience_form_modal.html" %}
+{% endif %}
 {% endblock content %}
+
+{% block script %}
+<script>
+    window.APP_CONFIG = {
+        csrfToken: '{{ csrf_token }}',
+        isSuperuser: {{ user.is_superuser|yesno:"true,false" }},
+        isEditor: {{ is_editor|yesno:"true,false" }},
+        currentUsername: '{{ user.username|escapejs }}'
+    };
+</script>
+<script src="{% static 'js/experience.js' %}"></script>
+{% endblock script %}

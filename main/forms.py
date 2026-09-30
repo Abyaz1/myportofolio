@@ -1,4 +1,6 @@
+from django.core.exceptions import ValidationError
 from django.forms import ModelForm, Select, Textarea, TextInput, URLInput
+from django.utils.html import strip_tags
 from main.models import Education, Experience, Mading
 
 
@@ -29,6 +31,18 @@ class EducationForm(ModelForm):
                 }
             ),
         }
+
+    def clean_institution(self):
+        institution = strip_tags(self.cleaned_data.get("institution", "")).strip()
+        if not institution:
+            raise ValidationError("Nama institusi tidak boleh hanya berisi tag HTML.")
+        return institution
+
+    def clean_Activity(self):
+        activity = strip_tags(self.cleaned_data.get("Activity", "")).strip()
+        if not activity:
+            raise ValidationError("Aktivitas tidak boleh hanya berisi tag HTML.")
+        return activity
 
 
 class ExperienceForm(ModelForm):
@@ -69,6 +83,15 @@ class ExperienceForm(ModelForm):
             ),
         }
 
+    def clean_title(self):
+        title = strip_tags(self.cleaned_data.get("title", "")).strip()
+        if not title:
+            raise ValidationError("Judul pengalaman tidak boleh hanya berisi tag HTML.")
+        return title
+
+    def clean_description(self):
+        return strip_tags(self.cleaned_data.get("description", "")).strip()
+
 
 class MadingForm(ModelForm):
     class Meta:
@@ -97,5 +120,18 @@ class MadingForm(ModelForm):
                 }
             ),
         }
+
+    def clean_name(self):
+        name = strip_tags(self.cleaned_data.get("name", "")).strip()
+        if not name:
+            raise ValidationError("Nama tidak boleh hanya berisi tag HTML.")
+        return name
+
+    def clean_message(self):
+        message = strip_tags(self.cleaned_data.get("message", "")).strip()
+        if not message:
+            raise ValidationError("Pesan tidak boleh hanya berisi tag HTML.")
+        return message
+
 
 

@@ -140,9 +140,6 @@ class MainTest(TestCase):
         data = json.loads(response.content.decode("utf-8"))
         self.assertEqual(data[0]["fields"]["starred_by"], [["admin"]])
 
-        proj_response = self.client.get(reverse("main:get_projects_json"))
-        self.assertEqual(proj_response.status_code, 200)
-
         response_filter = self.client.get(reverse("main:get_experience_json") + "?title=Asisten")
         self.assertEqual(response_filter.status_code, 200)
         self.assertContains(response_filter, "Asisten Dosen PBP")
@@ -472,3 +469,216 @@ class MainTest(TestCase):
         self.assertRedirects(unstar_resp, reverse("main:show_education"))
         self.assertEqual(self.education.starred_by.count(), 0)
         self.assertNotIn(regular_user, self.education.starred_by.all())
+
+    # --- Toast Notification Tests ---
+    def test_toast_component_rendered(self):
+        response = self.client.get(reverse("main:show_main"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="toast-component"')
+        self.assertContains(response, 'toast.js')
+
+    def test_toast_on_add_and_delete_experience(self):
+        self.client.login(username="admin", password="adminpassword")
+
+        # Add experience
+        add_resp = self.client.post(reverse("main:create_experience"), data={
+            "title": "Data Scientist Intern",
+            "description": "Bekerja dengan model AI",
+            "category": "internship",
+            "thumbnail": "",
+        }, follow=True)
+        self.assertContains(add_resp, "showToast")
+        self.assertContains(add_resp, "Experience baru berhasil ditambahkan!")
+
+        # Delete experience
+        created_exp = Experience.objects.get(title="Data Scientist Intern")
+        del_resp = self.client.post(
+            reverse("main:delete_experience", kwargs={"experience_id": created_exp.id}),
+            follow=True
+        )
+        self.assertContains(del_resp, "showToast")
+        self.assertContains(del_resp, "Experience berhasil dihapus!")
+
+    def test_toast_on_add_and_delete_education(self):
+        self.client.login(username="admin", password="adminpassword")
+
+        # Add education
+        add_resp = self.client.post(reverse("main:create_education"), data={
+            "institution": "Fasilkom UI",
+            "Activity": "Magister Ilmu Komputer",
+        }, follow=True)
+        self.assertContains(add_resp, "showToast")
+        self.assertContains(add_resp, "Pendidikan baru berhasil ditambahkan!")
+
+        # Delete education
+        created_edu = Education.objects.get(institution="Fasilkom UI")
+        del_resp = self.client.post(
+            reverse("main:delete_education", kwargs={"education_id": created_edu.id}),
+            follow=True
+        )
+        self.assertContains(del_resp, "showToast")
+        self.assertContains(del_resp, "Pendidikan berhasil dihapus!")
+
+    def test_toast_on_add_and_delete_mading(self):
+        self.client.login(username="admin", password="adminpassword")
+
+        # Add mading
+        add_resp = self.client.post(reverse("main:create_mading"), data={
+            "name": "Pengunjung",
+            "message": "Halo website keren!",
+        }, follow=True)
+        self.assertContains(add_resp, "showToast")
+        self.assertContains(add_resp, "Pesan mading berhasil diposting!")
+
+        # Delete mading
+        created_mading = Mading.objects.get(name="Pengunjung")
+        del_resp = self.client.post(
+            reverse("main:delete_mading", kwargs={"mading_id": created_mading.id}),
+            follow=True
+        )
+        self.assertContains(del_resp, "showToast")
+        self.assertContains(del_resp, "Pesan mading berhasil dihapus!")
+
+    def test_ajax_experience_search_elements(self):
+        response = self.client.get(reverse("main:show_experience"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="experience-search-form"')
+        self.assertContains(response, 'id="experience-search-input"')
+        self.assertContains(response, 'id="experience-loading-state"')
+        self.assertContains(response, 'id="experience-error-state"')
+        self.assertContains(response, 'id="experience-empty-state"')
+        self.assertContains(response, 'id="experience-grid"')
+        self.assertContains(response, 'experience.js')
+
+    def test_add_experience_modal_elements(self):
+        anon_resp = self.client.get(reverse("main:show_experience"))
+        self.assertNotContains(anon_resp, 'id="add-experience-modal"')
+
+        self.client.login(username="admin", password="adminpassword")
+        admin_resp = self.client.get(reverse("main:show_experience"))
+        self.assertContains(admin_resp, 'popovertarget="add-experience-modal"')
+        self.assertContains(admin_resp, 'id="add-experience-modal"')
+        self.assertContains(admin_resp, 'id="experience-form"')
+        self.assertContains(admin_resp, reverse("main:create_experience"))
+
+    def test_xss_protection(self):
+        from main.forms import ExperienceForm
+
+        # 1. Judul hanya berisi tag HTML ditolak
+        form_invalid = ExperienceForm(data={
+            "title": '<img src="x" onerror="alert(\'XSS!\')">',
+            "description": "Deskripsi aman",
+            "category": "internship",
+            "thumbnail": "",
+        })
+        self.assertFalse(form_invalid.is_valid())
+        self.assertIn("Judul pengalaman tidak boleh hanya berisi tag HTML.", form_invalid.errors["title"])
+
+        # 2. Tag HTML pada judul dan deskripsi dibersihkan oleh server
+        form_valid = ExperienceForm(data={
+            "title": 'Belajar <b>Django</b> Web',
+            "description": 'Pengalaman <i>frontend</i>',
+            "category": "part-time",
+            "thumbnail": "",
+        })
+        self.assertTrue(form_valid.is_valid())
+        self.assertEqual(form_valid.cleaned_data["title"], "Belajar Django Web")
+        self.assertEqual(form_valid.cleaned_data["description"], "Pengalaman frontend")
+
+    def test_ajax_education_search_elements(self):
+        response = self.client.get(reverse("main:show_education"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="education-search-form"')
+        self.assertContains(response, 'id="education-search-input"')
+        self.assertContains(response, 'id="education-loading-state"')
+        self.assertContains(response, 'id="education-error-state"')
+        self.assertContains(response, 'id="education-empty-state"')
+        self.assertContains(response, 'id="education-grid"')
+        self.assertContains(response, 'education.js')
+
+    def test_add_education_modal_elements(self):
+        anon_resp = self.client.get(reverse("main:show_education"))
+        self.assertNotContains(anon_resp, 'id="add-education-modal"')
+
+        self.client.login(username="admin", password="adminpassword")
+        admin_resp = self.client.get(reverse("main:show_education"))
+        self.assertContains(admin_resp, 'popovertarget="add-education-modal"')
+        self.assertContains(admin_resp, 'id="add-education-modal"')
+        self.assertContains(admin_resp, 'id="education-form"')
+        self.assertContains(admin_resp, reverse("main:create_education"))
+
+    def test_get_education_json(self):
+        response = self.client.get(reverse("main:get_education_json"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/json")
+        self.assertContains(response, "Universitas Indonesia")
+
+        filter_resp = self.client.get(reverse("main:get_education_json") + "?title=Indonesia")
+        self.assertEqual(filter_resp.status_code, 200)
+        self.assertContains(filter_resp, "Universitas Indonesia")
+
+        empty_filter_resp = self.client.get(reverse("main:get_education_json") + "?title=NonExistent")
+        self.assertEqual(empty_filter_resp.status_code, 200)
+        self.assertEqual(empty_filter_resp.json(), [])
+
+    def test_create_education_ajax(self):
+        self.client.login(username="admin", password="adminpassword")
+
+        # Success
+        resp = self.client.post(reverse("main:create_education_ajax"), data={
+            "institution": "MIT",
+            "Activity": "Computer Science",
+        })
+        self.assertEqual(resp.status_code, 201)
+        data = resp.json()
+        self.assertEqual(data["status"], "success")
+        self.assertTrue(Education.objects.filter(institution="MIT").exists())
+
+        # Invalid form
+        bad_resp = self.client.post(reverse("main:create_education_ajax"), data={
+            "institution": "",
+            "Activity": "",
+        })
+        self.assertEqual(bad_resp.status_code, 400)
+        self.assertEqual(bad_resp.json()["status"], "error")
+
+        # Unauthorized
+        self.client.logout()
+        unauth_resp = self.client.post(reverse("main:create_education_ajax"), data={
+            "institution": "Harvard",
+            "Activity": "Math",
+        })
+        self.assertEqual(unauth_resp.status_code, 302)
+
+    def test_create_experience_ajax(self):
+        self.client.login(username="admin", password="adminpassword")
+
+        resp = self.client.post(reverse("main:create_experience_ajax"), data={
+            "title": "Full Stack Dev",
+            "description": "Building scalable web apps",
+            "category": "full-time",
+            "thumbnail": "",
+        })
+        self.assertEqual(resp.status_code, 201)
+        self.assertEqual(resp.json()["status"], "success")
+        self.assertTrue(Experience.objects.filter(title="Full Stack Dev").exists())
+
+    def test_xss_protection_education(self):
+        from main.forms import EducationForm
+
+        # 1. HTML only is rejected
+        form_invalid = EducationForm(data={
+            "institution": "<script>alert('xss')</script>",
+            "Activity": "<b></b>",
+        })
+        self.assertFalse(form_invalid.is_valid())
+
+        # 2. Strips HTML tags when accompanied with valid text
+        form_valid = EducationForm(data={
+            "institution": "Universitas <b>Indonesia</b>",
+            "Activity": "<i>S1</i> Ilmu Komputer",
+        })
+        self.assertTrue(form_valid.is_valid())
+        self.assertEqual(form_valid.cleaned_data["institution"], "Universitas Indonesia")
+        self.assertEqual(form_valid.cleaned_data["Activity"], "S1 Ilmu Komputer")
+

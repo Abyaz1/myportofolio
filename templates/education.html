@@ -13,14 +13,40 @@
             <div class="project-header">
                 <h1 class="section-title">Education</h1>
                 {% if user.is_superuser %}
-                    <a href="{% url 'main:create_education' %}" class="button project-add-button">
+                    <button type="button"
+                            class="button project-add-button"
+                            popovertarget="add-education-modal">
                         <span aria-hidden="true">+</span>
                         Tambah Pendidikan
-                    </a>
+                    </button>
                 {% endif %}
             </div>
 
-            <div class="education-grid">
+            <form method="get"
+                  action="{% url 'main:show_education' %}"
+                  class="project-search"
+                  id="education-search-form">
+                <input type="search"
+                       name="title"
+                       id="education-search-input"
+                       value="{{ title_query }}"
+                       placeholder="Cari berdasarkan nama institusi atau aktivitas"
+                       class="project-search__input"
+                       aria-label="Cari berdasarkan nama institusi atau aktivitas">
+                <button type="submit" class="button">Cari</button>
+            </form>
+
+            <div id="education-loading-state" class="empty-state hide">
+                <p>Memuat data pendidikan...</p>
+            </div>
+            <div id="education-error-state" class="empty-state hide">
+                <p>Terjadi kesalahan saat memuat data. Silakan coba lagi.</p>
+            </div>
+            <div id="education-empty-state" class="empty-state hide">
+                <p>Belum ada pendidikan yang ditambahkan.</p>
+            </div>
+
+            <div id="education-grid" class="education-grid">
                 {% for education in education_list %}
                     <article class="education-card">
                         <div>
@@ -50,12 +76,29 @@
                         </div>
                     </article>
                 {% empty %}
-                    <p class="empty-state">
-                        Belum ada pendidikan yang ditambahkan.
-                    </p>
+                    {% if title_query %}
+                        <p class="empty-state">Tidak ada pendidikan dengan nama tersebut.</p>
+                    {% else %}
+                        <p class="empty-state">Belum ada pendidikan yang ditambahkan.</p>
+                    {% endif %}
                 {% endfor %}
             </div>
         </div>
     </section>
 </main>
+{% if user.is_superuser %}
+    {% include "components/education_form_modal.html" %}
+{% endif %}
 {% endblock content %}
+
+{% block script %}
+<script>
+    window.APP_CONFIG = {
+        csrfToken: '{{ csrf_token }}',
+        isSuperuser: {{ user.is_superuser|yesno:"true,false" }},
+        isEditor: {{ is_editor|yesno:"true,false" }},
+        currentUsername: '{{ user.username|escapejs }}'
+    };
+</script>
+<script src="{% static 'js/education.js' %}"></script>
+{% endblock script %}
