@@ -38,18 +38,21 @@ document.addEventListener('DOMContentLoaded', function () {
         const article = document.createElement('article');
         article.className = 'education-card';
 
-        const isOngoing = !item.fields.ended_at;
+        const id = item.id || item.pk;
+        const institution = item.institution || (item.fields && item.fields.institution) || '';
+        const activity = item.activity || (item.fields && item.fields.Activity) || '';
+        const isOngoing = item.is_ongoing !== undefined ? item.is_ongoing : !(item.fields && item.fields.ended_at);
         const statusText = isOngoing ? 'Sedang berlangsung' : 'Selesai';
 
-        const starredUsers = (item.fields.starred_by || []).map(u => Array.isArray(u) ? u[0] : u);
-        const starCount = starredUsers.length;
-        const isStarred = currentUsername && starredUsers.includes(currentUsername);
+        const starredUsers = item.starred_by || (item.fields && item.fields.starred_by) || [];
+        const starCount = item.star_count !== undefined ? item.star_count : starredUsers.length;
+        const isStarred = item.is_starred !== undefined ? item.is_starred : (currentUsername && starredUsers.includes(currentUsername));
         const starTitle = starCount > 0
             ? `Dibintangi oleh ${starredUsers.join(', ')}`
             : 'Jadilah yang pertama memberi star';
 
         let actionsHtml = `
-            <form method="post" action="/education/${item.pk}/star/" class="star-form">
+            <form method="post" action="/education/${id}/star/" class="star-form">
                 <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
                 <button type="submit"
                         class="button button-star${isStarred ? ' is-starred' : ''}"
@@ -62,46 +65,46 @@ document.addEventListener('DOMContentLoaded', function () {
         `;
 
         if (isSuperuser || isEditor) {
-            actionsHtml += `<a href="/education/${item.pk}/edit/" class="button button-secondary">Ubah</a>\n`;
+            actionsHtml += `<a href="/education/${id}/edit/" class="button button-secondary">Ubah</a>\n`;
         }
 
         if (isSuperuser) {
             actionsHtml += `
                 <button type="button"
                         class="button button-danger"
-                        popovertarget="delete-education-${item.pk}"
-                        aria-label="Hapus ${escapeHtml(item.fields.institution)}"
+                        popovertarget="delete-education-${id}"
+                        aria-label="Hapus ${escapeHtml(institution)}"
                         title="Hapus pendidikan">
                     Hapus
                 </button>
-                <div id="delete-education-${item.pk}"
+                <div id="delete-education-${id}"
                      class="project-delete-modal"
                      popover="auto"
                      role="dialog"
                      aria-modal="true"
-                     aria-labelledby="delete-education-title-${item.pk}">
+                     aria-labelledby="delete-education-title-${id}">
                     <button type="button"
                             class="project-delete-modal__backdrop"
-                            popovertarget="delete-education-${item.pk}"
+                            popovertarget="delete-education-${id}"
                             popovertargetaction="hide"
                             aria-label="Tutup konfirmasi hapus"></button>
                     <div class="project-delete-modal__content">
                         <button type="button"
                                 class="project-delete-modal__close"
-                                popovertarget="delete-education-${item.pk}"
+                                popovertarget="delete-education-${id}"
                                 popovertargetaction="hide"
                                 aria-label="Tutup konfirmasi hapus">×</button>
-                        <h2 id="delete-education-title-${item.pk}">Hapus Pendidikan?</h2>
+                        <h2 id="delete-education-title-${id}">Hapus Pendidikan?</h2>
                         <p>
                             Apakah Anda yakin ingin menghapus
-                            <strong>${escapeHtml(item.fields.institution)} - ${escapeHtml(item.fields.Activity)}</strong>?
+                            <strong>${escapeHtml(institution)} - ${escapeHtml(activity)}</strong>?
                         </p>
                         <div class="project-delete-modal__actions">
                             <button type="button"
                                     class="button button-secondary"
-                                    popovertarget="delete-education-${item.pk}"
+                                    popovertarget="delete-education-${id}"
                                     popovertargetaction="hide">Batal</button>
-                            <form method="post" action="/education/${item.pk}/delete/">
+                            <form method="post" action="/education/${id}/delete/">
                                 <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
                                 <button type="submit" class="button button-danger">Ya, Hapus</button>
                             </form>
@@ -114,8 +117,8 @@ document.addEventListener('DOMContentLoaded', function () {
         article.innerHTML = `
             <div>
                 <span class="education-category">Akademik</span>
-                <h2>${escapeHtml(item.fields.institution)}</h2>
-                <p class="education-description">${escapeHtml(item.fields.Activity)}</p>
+                <h2>${escapeHtml(institution)}</h2>
+                <p class="education-description">${escapeHtml(activity)}</p>
             </div>
             <div class="project-card-actions">
                 <p class="education-status">${escapeHtml(statusText)}</p>
@@ -224,7 +227,16 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                     searchEducations();
                 } else {
-                    const errorMsg = data.message || 'Gagal menambahkan pendidikan.';
+                    let errorMsg = data.message || 'Gagal menambahkan pendidikan.';
+                    if (data.errors && typeof data.errors === 'object') {
+                        const errorDetails = Object.values(data.errors)
+                            .flat()
+                            .map(err => (typeof err === 'object' && err.message) ? err.message : String(err))
+                            .join(', ');
+                        if (errorDetails) {
+                            errorMsg += `: ${errorDetails}`;
+                        }
+                    }
                     if (typeof showToast === 'function') {
                         showToast('Gagal', errorMsg, 'error');
                     } else {

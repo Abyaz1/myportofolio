@@ -49,30 +49,27 @@ class MainTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "experience.html")
 
-    def test_experience_page_shows_data(self):
+    def test_experience_page_shows_skeleton(self):
         response = self.client.get(reverse("main:show_experience"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, self.experience.title)
-        self.assertContains(response, self.experience.description)
-        self.assertContains(response, "Part-Time")
-        self.assertContains(response, "Sedang berlangsung")
+        self.assertContains(response, 'id="experience-grid"')
+        self.assertContains(response, 'id="experience-loading-state"')
         self.assertContains(response, f'href="{reverse("main:show_main")}"')
 
     def test_empty_experience_page(self):
         Experience.objects.all().delete()
-        response = self.client.get(reverse("main:show_experience"))
-
-        self.assertContains(response, "Belum ada pengalaman yang ditambahkan.")
+        response = self.client.get(reverse("main:get_experience_json"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), [])
 
     def test_completed_experience(self):
         self.experience.ended_at = timezone.now()
         self.experience.save()
-        response = self.client.get(reverse("main:show_experience"))
 
         self.assertFalse(self.experience.is_ongoing)
-        self.assertContains(response, "Selesai")
-        self.assertNotContains(response, "Sedang berlangsung")
+        response = self.client.get(reverse("main:get_experience_json"))
+        self.assertFalse(response.json()[0]["is_ongoing"])
 
     # --- Education Tests ---
     def test_education_model(self):
@@ -85,29 +82,27 @@ class MainTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "education.html")
 
-    def test_education_page_shows_data(self):
+    def test_education_page_shows_skeleton(self):
         response = self.client.get(reverse("main:show_education"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, self.education.institution)
-        self.assertContains(response, self.education.Activity)
-        self.assertContains(response, "Sedang berlangsung")
+        self.assertContains(response, 'id="education-grid"')
+        self.assertContains(response, 'id="education-loading-state"')
         self.assertContains(response, f'href="{reverse("main:show_main")}"')
 
     def test_empty_education_page(self):
         Education.objects.all().delete()
-        response = self.client.get(reverse("main:show_education"))
-
-        self.assertContains(response, "Belum ada pendidikan yang ditambahkan.")
+        response = self.client.get(reverse("main:get_education_json"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), [])
 
     def test_completed_education(self):
         self.education.ended_at = timezone.now()
         self.education.save()
-        response = self.client.get(reverse("main:show_education"))
 
         self.assertFalse(self.education.is_ongoing)
-        self.assertContains(response, "Selesai")
-        self.assertNotContains(response, "Sedang berlangsung")
+        response = self.client.get(reverse("main:get_education_json"))
+        self.assertFalse(response.json()[0]["is_ongoing"])
 
     def test_education_form_valid(self):
         from main.forms import EducationForm
@@ -131,14 +126,16 @@ class MainTest(TestCase):
         self.assertTrue(Education.objects.filter(institution="SMA Negeri 1").exists())
 
     def test_get_experience_json(self):
-        import json
+        self.client.login(username="admin", password="adminpassword")
         self.experience.starred_by.add(self.superuser)
 
         response = self.client.get(reverse("main:get_experience_json"))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "application/json")
-        data = json.loads(response.content.decode("utf-8"))
-        self.assertEqual(data[0]["fields"]["starred_by"], [["admin"]])
+        data = response.json()
+        self.assertEqual(data[0]["starred_by"], ["admin"])
+        self.assertEqual(data[0]["star_count"], 1)
+        self.assertTrue(data[0]["is_starred"])
 
         response_filter = self.client.get(reverse("main:get_experience_json") + "?title=Asisten")
         self.assertEqual(response_filter.status_code, 200)
@@ -308,31 +305,27 @@ class MainTest(TestCase):
         self.assertNotContains(after_resp, "testuser")
 
     def test_buttons_hidden_for_anonymous_and_visible_for_superuser(self):
-        # 1. Pengunjung anonim (belum login) tidak boleh melihat tombol Tambah & Hapus/Ubah
+        # 1. Pengunjung anonim (belum login) tidak boleh melihat tombol Tambah
         exp_resp = self.client.get(reverse("main:show_experience"))
         self.assertEqual(exp_resp.status_code, 200)
         self.assertNotContains(exp_resp, "Tambah Experience")
         self.assertNotContains(exp_resp, reverse("main:create_experience"))
-        self.assertNotContains(exp_resp, "delete-experience-")
 
         edu_resp = self.client.get(reverse("main:show_education"))
         self.assertEqual(edu_resp.status_code, 200)
         self.assertNotContains(edu_resp, "Tambah Pendidikan")
         self.assertNotContains(edu_resp, reverse("main:create_education"))
-        self.assertNotContains(edu_resp, "delete-education-")
 
-        # 2. Superuser harus melihat tombol Tambah & Hapus/Ubah
+        # 2. Superuser harus melihat tombol Tambah
         self.client.login(username="admin", password="adminpassword")
 
         exp_admin_resp = self.client.get(reverse("main:show_experience"))
         self.assertContains(exp_admin_resp, "Tambah Experience")
         self.assertContains(exp_admin_resp, reverse("main:create_experience"))
-        self.assertContains(exp_admin_resp, f"delete-experience-{self.experience.id}")
 
         edu_admin_resp = self.client.get(reverse("main:show_education"))
         self.assertContains(edu_admin_resp, "Tambah Pendidikan")
         self.assertContains(edu_admin_resp, reverse("main:create_education"))
-        self.assertContains(edu_admin_resp, f"delete-education-{self.education.id}")
 
     def test_toggle_star_experience(self):
         from django.contrib.auth.models import User
@@ -355,9 +348,11 @@ class MainTest(TestCase):
         self.assertEqual(self.experience.starred_by.count(), 1)
         self.assertIn(regular_user, self.experience.starred_by.all())
 
-        page_resp = self.client.get(reverse("main:show_experience"))
-        self.assertContains(page_resp, "is-starred")
-        self.assertContains(page_resp, "Unstar")
+        # Di AJAX JSON response, star_count = 1 dan is_starred = True
+        json_resp = self.client.get(reverse("main:get_experience_json"))
+        items = json_resp.json()
+        self.assertEqual(items[0]["star_count"], 1)
+        self.assertTrue(items[0]["is_starred"])
 
         # 3. Pengguna login klik lagi untuk unstar
         unstar_resp = self.client.post(
@@ -366,6 +361,11 @@ class MainTest(TestCase):
         self.assertRedirects(unstar_resp, reverse("main:show_experience"))
         self.assertEqual(self.experience.starred_by.count(), 0)
         self.assertNotIn(regular_user, self.experience.starred_by.all())
+
+        json_resp_after = self.client.get(reverse("main:get_experience_json"))
+        items_after = json_resp_after.json()
+        self.assertEqual(items_after[0]["star_count"], 0)
+        self.assertFalse(items_after[0]["is_starred"])
 
     def test_authorization_four_roles(self):
         from django.contrib.auth.models import User, Group
@@ -390,8 +390,6 @@ class MainTest(TestCase):
         # UI: tidak ada tombol aksi
         guest_page = self.client.get(reverse("main:show_experience"))
         self.assertNotContains(guest_page, "Tambah Experience")
-        self.assertNotContains(guest_page, "Ubah")
-        self.assertNotContains(guest_page, f"delete-experience-{self.experience.id}")
 
         # --- Peran 2: Pengguna biasa (Regular User) ---
         self.client.login(username="normaluser", password="password123")
@@ -402,12 +400,9 @@ class MainTest(TestCase):
         self.assertEqual(self.client.get(create_exp_url).status_code, 403)
         self.assertEqual(self.client.get(edit_exp_url).status_code, 403)
         self.assertEqual(self.client.post(delete_exp_url).status_code, 403)
-        # UI: melihat star, tetapi tidak melihat tombol Tambah, Ubah, maupun Hapus
+        # UI: tidak melihat tombol Tambah
         normal_page = self.client.get(reverse("main:show_experience"))
-        self.assertContains(normal_page, "button-star")
         self.assertNotContains(normal_page, "Tambah Experience")
-        self.assertNotContains(normal_page, "Ubah")
-        self.assertNotContains(normal_page, f"delete-experience-{self.experience.id}")
 
         # --- Peran 3: Editor ---
         self.client.login(username="editoruser", password="password123")
@@ -418,24 +413,18 @@ class MainTest(TestCase):
         # TIDAK DAPAT membuat atau menghapus -> 403 Forbidden
         self.assertEqual(self.client.get(create_exp_url).status_code, 403)
         self.assertEqual(self.client.post(delete_exp_url).status_code, 403)
-        # UI: melihat tombol Ubah & star, TETAPI TIDAK melihat tombol Tambah atau Hapus
+        # UI: tidak melihat tombol Tambah
         editor_page = self.client.get(reverse("main:show_experience"))
-        self.assertContains(editor_page, "button-star")
-        self.assertContains(editor_page, "Ubah")
         self.assertNotContains(editor_page, "Tambah Experience")
-        self.assertNotContains(editor_page, f"delete-experience-{self.experience.id}")
 
         # --- Peran 4: Pemilik Portofolio (Superuser) ---
         self.client.login(username="admin", password="adminpassword")
         # DAPAT membuat, mengubah, menghapus
         self.assertEqual(self.client.get(create_exp_url).status_code, 200)
         self.assertEqual(self.client.get(edit_exp_url).status_code, 200)
-        # UI: melihat SEMUA tombol (Tambah, Ubah, Hapus, Star)
+        # UI: melihat tombol Tambah Experience
         admin_page = self.client.get(reverse("main:show_experience"))
-        self.assertContains(admin_page, "button-star")
         self.assertContains(admin_page, "Tambah Experience")
-        self.assertContains(admin_page, "Ubah")
-        self.assertContains(admin_page, f"delete-experience-{self.experience.id}")
 
     def test_toggle_star_education(self):
         from django.contrib.auth.models import User
@@ -458,9 +447,10 @@ class MainTest(TestCase):
         self.assertEqual(self.education.starred_by.count(), 1)
         self.assertIn(regular_user, self.education.starred_by.all())
 
-        page_resp = self.client.get(reverse("main:show_education"))
-        self.assertContains(page_resp, "is-starred")
-        self.assertContains(page_resp, "Unstar")
+        json_resp = self.client.get(reverse("main:get_education_json"))
+        items = json_resp.json()
+        self.assertEqual(items[0]["star_count"], 1)
+        self.assertTrue(items[0]["is_starred"])
 
         # 3. Pengguna login membatalkan star
         unstar_resp = self.client.post(
@@ -469,6 +459,11 @@ class MainTest(TestCase):
         self.assertRedirects(unstar_resp, reverse("main:show_education"))
         self.assertEqual(self.education.starred_by.count(), 0)
         self.assertNotIn(regular_user, self.education.starred_by.all())
+
+        json_resp_after = self.client.get(reverse("main:get_education_json"))
+        items_after = json_resp_after.json()
+        self.assertEqual(items_after[0]["star_count"], 0)
+        self.assertFalse(items_after[0]["is_starred"])
 
     # --- Toast Notification Tests ---
     def test_toast_component_rendered(self):
@@ -648,11 +643,13 @@ class MainTest(TestCase):
             "institution": "Harvard",
             "Activity": "Math",
         })
-        self.assertEqual(unauth_resp.status_code, 302)
+        self.assertEqual(unauth_resp.status_code, 403)
+        self.assertEqual(unauth_resp.json()["status"], "error")
 
     def test_create_experience_ajax(self):
         self.client.login(username="admin", password="adminpassword")
 
+        # Success
         resp = self.client.post(reverse("main:create_experience_ajax"), data={
             "title": "Full Stack Dev",
             "description": "Building scalable web apps",
@@ -662,6 +659,25 @@ class MainTest(TestCase):
         self.assertEqual(resp.status_code, 201)
         self.assertEqual(resp.json()["status"], "success")
         self.assertTrue(Experience.objects.filter(title="Full Stack Dev").exists())
+
+        # Invalid form
+        bad_resp = self.client.post(reverse("main:create_experience_ajax"), data={
+            "title": "",
+            "description": "",
+            "category": "full-time",
+        })
+        self.assertEqual(bad_resp.status_code, 400)
+        self.assertEqual(bad_resp.json()["status"], "error")
+
+        # Unauthorized
+        self.client.logout()
+        unauth_resp = self.client.post(reverse("main:create_experience_ajax"), data={
+            "title": "Hacker",
+            "description": "Exploit",
+            "category": "full-time",
+        })
+        self.assertEqual(unauth_resp.status_code, 403)
+        self.assertEqual(unauth_resp.json()["status"], "error")
 
     def test_xss_protection_education(self):
         from main.forms import EducationForm

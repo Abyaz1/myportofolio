@@ -45,50 +45,7 @@
                 <p>Belum ada pengalaman yang ditambahkan.</p>
             </div>
 
-            <div id="experience-grid" class="experience-grid">
-                {% for experience in experience_list %}
-                    <article class="experience-card">
-                        <div>
-                            {% if experience.thumbnail %}
-                                <img src="{{ experience.thumbnail }}"
-                                     alt="Gambar {{ experience.title }}"
-                                     class="project-image">
-                            {% endif %}
-                            <span class="experience-category">
-                                {{ experience.get_category_display }}
-                            </span>
-                            <h2>{{ experience.title }}</h2>
-                            <p class="experience-description">
-                                {{ experience.description }}
-                            </p>
-                        </div>
-
-                        <div class="project-card-actions">
-                            {% if experience.is_ongoing %}
-                                <p class="experience-status">Sedang berlangsung</p>
-                            {% else %}
-                                <p class="experience-status">Selesai</p>
-                            {% endif %}
-
-                            <div class="project-actions">
-                                {% include "components/experience_star.html" with experience=experience %}
-                                {% if user.is_superuser or is_editor %}
-                                    <a href="{% url 'main:edit_experience' experience.id %}" class="button button-secondary">Ubah</a>
-                                {% endif %}
-                                {% if user.is_superuser %}
-                                    {% include "components/experience_delete_modal.html" with experience=experience %}
-                                {% endif %}
-                            </div>
-                        </div>
-                    </article>
-                {% empty %}
-                    {% if title_query %}
-                        <p class="empty-state">Tidak ada experience dengan nama tersebut.</p>
-                    {% else %}
-                        <p class="empty-state">Belum ada pengalaman yang ditambahkan.</p>
-                    {% endif %}
-                {% endfor %}
-            </div>
+            <div id="experience-grid" class="experience-grid"></div>
         </div>
     </section>
 </main>

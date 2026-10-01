@@ -45,13 +45,9 @@ def show_main(request):
 
 def show_experience(request):
     title_query = request.GET.get("title", "").strip()
-    experiences = Experience.objects.all()
-    if title_query:
-        experiences = experiences.filter(title__icontains=title_query)
 
     context = {
         "name": "M Naufal Abyaz Bawono",
-        "experience_list": experiences,
         "title_query": title_query,
         "form": ExperienceForm(),
         "is_editor": check_is_editor(request.user),
@@ -61,27 +57,22 @@ def show_experience(request):
 
 def show_education(request):
     title_query = request.GET.get("title", "").strip()
-    educations = Education.objects.all()
-    if title_query:
-        educations = educations.filter(
-            Q(institution__icontains=title_query) | Q(Activity__icontains=title_query)
-        )
 
     context = {
         "name": "M Naufal Abyaz Bawono",
-        "education_list": educations,
         "title_query": title_query,
         "form": EducationForm(),
         "is_editor": check_is_editor(request.user),
     }
     return render(request, "education.html", context)
 
-@login_required(login_url="/login/")
 def create_education(request):
+    if request.headers.get("x-requested-with") == "XMLHttpRequest" or "application/json" in request.headers.get("Accept", ""):
+        return create_education_ajax(request)
+    if not request.user.is_authenticated:
+        return redirect(f"/login/?next={request.path}")
     if not request.user.is_superuser:
         raise PermissionDenied
-    if request.method == "POST" and (request.headers.get("x-requested-with") == "XMLHttpRequest" or "application/json" in request.headers.get("Accept", "")):
-        return create_education_ajax(request)
     form = EducationForm(request.POST or None)
 
     if request.method == "POST" and form.is_valid():
@@ -126,10 +117,13 @@ def edit_education(request, education_id):
     }
     return render(request, "education_edit_form.html", context)
 
-@login_required(login_url="/login/")
 def create_experience_ajax(request):
-    if not request.user.is_superuser:
-        raise PermissionDenied
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        return JsonResponse({
+            "status": "error",
+            "message": "Akses ditolak. Anda tidak memiliki izin untuk menambah experience.",
+        }, status=403)
+
     if request.method == "POST":
         form = ExperienceForm(request.POST)
         if form.is_valid():
@@ -148,10 +142,13 @@ def create_experience_ajax(request):
             }, status=400)
     return JsonResponse({"status": "error", "message": "Metode tidak diizinkan."}, status=405)
 
-@login_required(login_url="/login/")
 def create_education_ajax(request):
-    if not request.user.is_superuser:
-        raise PermissionDenied
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        return JsonResponse({
+            "status": "error",
+            "message": "Akses ditolak. Anda tidak memiliki izin untuk menambah pendidikan.",
+        }, status=403)
+
     if request.method == "POST":
         form = EducationForm(request.POST)
         if form.is_valid():
@@ -170,12 +167,13 @@ def create_education_ajax(request):
             }, status=400)
     return JsonResponse({"status": "error", "message": "Metode tidak diizinkan."}, status=405)
 
-@login_required(login_url="/login/")
 def create_experience(request):
+    if request.headers.get("x-requested-with") == "XMLHttpRequest" or "application/json" in request.headers.get("Accept", ""):
+        return create_experience_ajax(request)
+    if not request.user.is_authenticated:
+        return redirect(f"/login/?next={request.path}")
     if not request.user.is_superuser:
         raise PermissionDenied
-    if request.method == "POST" and (request.headers.get("x-requested-with") == "XMLHttpRequest" or "application/json" in request.headers.get("Accept", "")):
-        return create_experience_ajax(request)
     form = ExperienceForm(request.POST or None)
 
     if request.method == "POST" and form.is_valid():
@@ -211,34 +209,59 @@ def edit_experience(request, experience_id):
 
 def get_experience_json(request):
     title_query = request.GET.get("title", "").strip()
-    experiences = Experience.objects.all()
+    experiences = Experience.objects.all().prefetch_related("starred_by")
 
     if title_query:
         experiences = experiences.filter(title__icontains=title_query)
 
-    experiences_json = serializers.serialize(
-        "json",
-        experiences,
-        use_natural_foreign_keys=True,
-    )
-    return HttpResponse(experiences_json, content_type="application/json")
+    data = []
+    user = request.user
+    for exp in experiences:
+        starred_users = list(exp.starred_by.values_list("username", flat=True))
+        data.append({
+            "id": str(exp.id),
+            "title": exp.title,
+            "description": exp.description,
+            "category": exp.category,
+            "category_display": exp.get_category_display(),
+            "thumbnail": exp.thumbnail or "",
+            "started_at": exp.started_at.isoformat() if exp.started_at else None,
+            "ended_at": exp.ended_at.isoformat() if exp.ended_at else None,
+            "is_ongoing": exp.is_ongoing,
+            "star_count": len(starred_users),
+            "is_starred": user.is_authenticated and (user.username in starred_users),
+            "starred_by": starred_users,
+        })
+
+    return JsonResponse(data, safe=False)
 
 
 def get_education_json(request):
     title_query = request.GET.get("title", "").strip()
-    educations = Education.objects.all()
+    educations = Education.objects.all().prefetch_related("starred_by")
 
     if title_query:
         educations = educations.filter(
             Q(institution__icontains=title_query) | Q(Activity__icontains=title_query)
         )
 
-    educations_json = serializers.serialize(
-        "json",
-        educations,
-        use_natural_foreign_keys=True,
-    )
-    return HttpResponse(educations_json, content_type="application/json")
+    data = []
+    user = request.user
+    for edu in educations:
+        starred_users = list(edu.starred_by.values_list("username", flat=True))
+        data.append({
+            "id": str(edu.id),
+            "institution": edu.institution,
+            "activity": edu.Activity,
+            "started_at": edu.started_at.isoformat() if edu.started_at else None,
+            "ended_at": edu.ended_at.isoformat() if edu.ended_at else None,
+            "is_ongoing": edu.is_ongoing,
+            "star_count": len(starred_users),
+            "is_starred": user.is_authenticated and (user.username in starred_users),
+            "starred_by": starred_users,
+        })
+
+    return JsonResponse(data, safe=False)
 
 
 @login_required(login_url="/login/")

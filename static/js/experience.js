@@ -47,23 +47,28 @@ document.addEventListener('DOMContentLoaded', function () {
         const article = document.createElement('article');
         article.className = 'experience-card';
 
-        const categoryText = categoryMap[item.fields.category] || item.fields.category;
-        const isOngoing = !item.fields.ended_at;
+        const id = item.id || item.pk;
+        const title = item.title || (item.fields && item.fields.title) || '';
+        const description = item.description || (item.fields && item.fields.description) || '';
+        const rawCategory = item.category || (item.fields && item.fields.category) || '';
+        const categoryText = item.category_display || categoryMap[rawCategory] || rawCategory;
+        const isOngoing = item.is_ongoing !== undefined ? item.is_ongoing : !(item.fields && item.fields.ended_at);
         const statusText = isOngoing ? 'Sedang berlangsung' : 'Selesai';
+        const thumbnail = item.thumbnail !== undefined ? item.thumbnail : (item.fields && item.fields.thumbnail);
 
-        const starredUsers = (item.fields.starred_by || []).map(u => Array.isArray(u) ? u[0] : u);
-        const starCount = starredUsers.length;
-        const isStarred = currentUsername && starredUsers.includes(currentUsername);
+        const starredUsers = item.starred_by || (item.fields && item.fields.starred_by) || [];
+        const starCount = item.star_count !== undefined ? item.star_count : starredUsers.length;
+        const isStarred = item.is_starred !== undefined ? item.is_starred : (currentUsername && starredUsers.includes(currentUsername));
         const starTitle = starCount > 0
             ? `Dibintangi oleh ${starredUsers.join(', ')}`
             : 'Jadilah yang pertama memberi star';
 
-        const thumbnailHtml = item.fields.thumbnail
-            ? `<img src="${escapeHtml(item.fields.thumbnail)}" alt="Gambar ${escapeHtml(item.fields.title)}" class="project-image">`
+        const thumbnailHtml = thumbnail
+            ? `<img src="${escapeHtml(thumbnail)}" alt="Gambar ${escapeHtml(title)}" class="project-image">`
             : '';
 
         let actionsHtml = `
-            <form method="post" action="/experience/${item.pk}/star/" class="star-form">
+            <form method="post" action="/experience/${id}/star/" class="star-form">
                 <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
                 <button type="submit"
                         class="button button-star${isStarred ? ' is-starred' : ''}"
@@ -76,46 +81,46 @@ document.addEventListener('DOMContentLoaded', function () {
         `;
 
         if (isSuperuser || isEditor) {
-            actionsHtml += `<a href="/experience/${item.pk}/edit/" class="button button-secondary">Ubah</a>\n`;
+            actionsHtml += `<a href="/experience/${id}/edit/" class="button button-secondary">Ubah</a>\n`;
         }
 
         if (isSuperuser) {
             actionsHtml += `
                 <button type="button"
                         class="button button-danger"
-                        popovertarget="delete-experience-${item.pk}"
-                        aria-label="Hapus ${escapeHtml(item.fields.title)}"
+                        popovertarget="delete-experience-${id}"
+                        aria-label="Hapus ${escapeHtml(title)}"
                         title="Hapus experience">
                     Hapus
                 </button>
-                <div id="delete-experience-${item.pk}"
+                <div id="delete-experience-${id}"
                      class="project-delete-modal"
                      popover="auto"
                      role="dialog"
                      aria-modal="true"
-                     aria-labelledby="delete-experience-title-${item.pk}">
+                     aria-labelledby="delete-experience-title-${id}">
                     <button type="button"
                             class="project-delete-modal__backdrop"
-                            popovertarget="delete-experience-${item.pk}"
+                            popovertarget="delete-experience-${id}"
                             popovertargetaction="hide"
                             aria-label="Tutup konfirmasi hapus"></button>
                     <div class="project-delete-modal__content">
                         <button type="button"
                                 class="project-delete-modal__close"
-                                popovertarget="delete-experience-${item.pk}"
+                                popovertarget="delete-experience-${id}"
                                 popovertargetaction="hide"
                                 aria-label="Tutup konfirmasi hapus">×</button>
-                        <h2 id="delete-experience-title-${item.pk}">Hapus Experience?</h2>
+                        <h2 id="delete-experience-title-${id}">Hapus Experience?</h2>
                         <p>
                             Apakah Anda yakin ingin menghapus
-                            <strong>${escapeHtml(item.fields.title)}</strong>?
+                            <strong>${escapeHtml(title)}</strong>?
                         </p>
                         <div class="project-delete-modal__actions">
                             <button type="button"
                                     class="button button-secondary"
-                                    popovertarget="delete-experience-${item.pk}"
+                                    popovertarget="delete-experience-${id}"
                                     popovertargetaction="hide">Batal</button>
-                            <form method="post" action="/experience/${item.pk}/delete/">
+                            <form method="post" action="/experience/${id}/delete/">
                                 <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
                                 <button type="submit" class="button button-danger">Ya, Hapus</button>
                             </form>
@@ -129,8 +134,8 @@ document.addEventListener('DOMContentLoaded', function () {
             <div>
                 ${thumbnailHtml}
                 <span class="experience-category">${escapeHtml(categoryText)}</span>
-                <h2>${escapeHtml(item.fields.title)}</h2>
-                <p class="experience-description">${escapeHtml(item.fields.description)}</p>
+                <h2>${escapeHtml(title)}</h2>
+                <p class="experience-description">${escapeHtml(description)}</p>
             </div>
             <div class="project-card-actions">
                 <p class="experience-status">${escapeHtml(statusText)}</p>
@@ -239,7 +244,16 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                     searchExperiences();
                 } else {
-                    const errorMsg = data.message || 'Gagal menambahkan experience.';
+                    let errorMsg = data.message || 'Gagal menambahkan experience.';
+                    if (data.errors && typeof data.errors === 'object') {
+                        const errorDetails = Object.values(data.errors)
+                            .flat()
+                            .map(err => (typeof err === 'object' && err.message) ? err.message : String(err))
+                            .join(', ');
+                        if (errorDetails) {
+                            errorMsg += `: ${errorDetails}`;
+                        }
+                    }
                     if (typeof showToast === 'function') {
                         showToast('Gagal', errorMsg, 'error');
                     } else {
