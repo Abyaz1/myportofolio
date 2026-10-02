@@ -12,14 +12,26 @@
             <p class="section-kicker">Pendidikan saya sejauh ini</p>
             <div class="project-header">
                 <h1 class="section-title">Education</h1>
-                {% if user.is_superuser %}
-                    <button type="button"
-                            class="button project-add-button"
-                            popovertarget="add-education-modal">
-                        <span aria-hidden="true">+</span>
-                        Tambah Pendidikan
-                    </button>
-                {% endif %}
+                <div class="project-header-actions">
+                    <div class="view-switch" role="group" aria-label="Pilihan Tampilan">
+                        <button type="button" class="view-switch-btn is-active" data-view="timeline" id="education-view-timeline" title="Tampilan Timeline Vertikal">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v20M8 6h8M6 12h12M8 18h8"/></svg>
+                            Timeline
+                        </button>
+                        <button type="button" class="view-switch-btn" data-view="grid" id="education-view-grid" title="Tampilan Grid">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                            Grid
+                        </button>
+                    </div>
+                    {% if user.is_superuser %}
+                        <button type="button"
+                                class="button project-add-button"
+                                popovertarget="add-education-modal">
+                            <span aria-hidden="true">+</span>
+                            Tambah Pendidikan
+                        </button>
+                    {% endif %}
+                </div>
             </div>
 
             <form method="get"
@@ -46,7 +58,7 @@
                 <p>Belum ada pendidikan yang ditambahkan.</p>
             </div>
 
-            <div id="education-grid" class="education-grid"></div>
+            <div id="education-grid" class="education-grid timeline-container is-timeline"></div>
         </div>
     </section>
 </main>

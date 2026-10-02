@@ -9,7 +9,45 @@ document.addEventListener('DOMContentLoaded', function () {
     const gridElement = document.getElementById('education-grid');
     const educationForm = document.getElementById('education-form');
 
+    const timelineBtn = document.getElementById('education-view-timeline');
+    const gridBtn = document.getElementById('education-view-grid');
+
     if (!searchForm || !searchInput || !gridElement) return;
+
+    let currentView = localStorage.getItem('portfolio_education_view') || 'timeline';
+
+    function setView(view) {
+        currentView = view;
+        try {
+            localStorage.setItem('portfolio_education_view', view);
+        } catch (e) {}
+
+        if (view === 'grid') {
+            gridElement.classList.add('is-grid');
+            gridElement.classList.remove('is-timeline');
+            if (gridBtn) gridBtn.classList.add('is-active');
+            if (timelineBtn) timelineBtn.classList.remove('is-active');
+        } else {
+            gridElement.classList.add('is-timeline');
+            gridElement.classList.remove('is-grid');
+            if (timelineBtn) timelineBtn.classList.add('is-active');
+            if (gridBtn) gridBtn.classList.remove('is-active');
+        }
+    }
+
+    if (timelineBtn) {
+        timelineBtn.addEventListener('click', function () {
+            setView('timeline');
+        });
+    }
+    if (gridBtn) {
+        gridBtn.addEventListener('click', function () {
+            setView('grid');
+        });
+    }
+
+    // Set initial view mode
+    setView(currentView);
 
     const config = window.APP_CONFIG || {};
     const csrfToken = config.csrfToken || '';
@@ -27,6 +65,24 @@ document.addEventListener('DOMContentLoaded', function () {
             .replaceAll("'", '&#39;');
     }
 
+    function formatPeriod(startedAt, endedAt, isOngoing) {
+        if (!startedAt) {
+            return isOngoing ? 'Sedang Berlangsung' : 'Selesai';
+        }
+        try {
+            const startDate = new Date(startedAt);
+            const startStr = startDate.toLocaleDateString('id-ID', { month: 'short', year: 'numeric' });
+            if (isOngoing || !endedAt) {
+                return `${startStr} — Sekarang`;
+            }
+            const endDate = new Date(endedAt);
+            const endStr = endDate.toLocaleDateString('id-ID', { month: 'short', year: 'numeric' });
+            return `${startStr} — ${endStr}`;
+        } catch (e) {
+            return isOngoing ? 'Sedang Berlangsung' : 'Selesai';
+        }
+    }
+
     function displayPageSection({ showLoading = false, showError = false, showEmpty = false, showGrid = false } = {}) {
         if (loadingElement) loadingElement.classList.toggle('hide', !showLoading);
         if (errorElement) errorElement.classList.toggle('hide', !showError);
@@ -34,15 +90,19 @@ document.addEventListener('DOMContentLoaded', function () {
         if (gridElement) gridElement.classList.toggle('hide', !showGrid);
     }
 
-    function buildEducationCardElement(item) {
-        const article = document.createElement('article');
-        article.className = 'education-card';
+    function buildEducationCardElement(item, index = 0) {
+        const itemWrapper = document.createElement('div');
+        const isLeft = index % 2 === 0;
+        itemWrapper.className = `timeline-item ${isLeft ? 'timeline-item-left' : 'timeline-item-right'}`;
 
         const id = item.id || item.pk;
         const institution = item.institution || (item.fields && item.fields.institution) || '';
         const activity = item.activity || (item.fields && item.fields.Activity) || '';
         const isOngoing = item.is_ongoing !== undefined ? item.is_ongoing : !(item.fields && item.fields.ended_at);
         const statusText = isOngoing ? 'Sedang berlangsung' : 'Selesai';
+        const startedAt = item.started_at || (item.fields && item.fields.started_at);
+        const endedAt = item.ended_at || (item.fields && item.fields.ended_at);
+        const periodText = formatPeriod(startedAt, endedAt, isOngoing);
 
         const starredUsers = item.starred_by || (item.fields && item.fields.starred_by) || [];
         const starCount = item.star_count !== undefined ? item.star_count : starredUsers.length;
@@ -114,21 +174,42 @@ document.addEventListener('DOMContentLoaded', function () {
             `;
         }
 
-        article.innerHTML = `
-            <div>
-                <span class="education-category">Akademik</span>
-                <h2>${escapeHtml(institution)}</h2>
-                <p class="education-description">${escapeHtml(activity)}</p>
-            </div>
-            <div class="project-card-actions">
-                <p class="education-status">${escapeHtml(statusText)}</p>
-                <div class="project-actions">
-                    ${actionsHtml}
-                </div>
+        const markerHtml = `
+            <div class="timeline-marker ${isOngoing ? 'is-ongoing' : ''}" aria-hidden="true" title="${escapeHtml(statusText)}">
+                <svg class="timeline-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 10v6M2 10l10-5 10 5-10 5z"></path>
+                    <path d="M6 12v5c3 3 9 3 12 0v-5"></path>
+                </svg>
             </div>
         `;
 
-        return article;
+        itemWrapper.innerHTML = `
+            ${markerHtml}
+            <article class="education-card timeline-card">
+                <div>
+                    <div class="timeline-card-header">
+                        <span class="education-category">Akademik</span>
+                        <span class="timeline-period-badge">
+                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                            ${escapeHtml(periodText)}
+                        </span>
+                    </div>
+                    <h2>${escapeHtml(institution)}</h2>
+                    <p class="education-description">${escapeHtml(activity)}</p>
+                </div>
+                <div class="project-card-actions">
+                    <p class="education-status">${escapeHtml(statusText)}</p>
+                    <div class="project-actions">
+                        ${actionsHtml}
+                    </div>
+                </div>
+            </article>
+        `;
+
+        return itemWrapper;
     }
 
     let currentController = null;
@@ -161,10 +242,21 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
                 displayPageSection({ showEmpty: true });
             } else {
-                data.forEach(item => {
-                    const card = buildEducationCardElement(item);
+                const startCap = document.createElement('div');
+                startCap.className = 'timeline-cap timeline-start-cap';
+                startCap.innerHTML = '<span class="timeline-cap-badge">Terbaru / Sekarang</span>';
+                gridElement.appendChild(startCap);
+
+                data.forEach((item, index) => {
+                    const card = buildEducationCardElement(item, index);
                     gridElement.appendChild(card);
                 });
+
+                const endCap = document.createElement('div');
+                endCap.className = 'timeline-cap timeline-end-cap';
+                endCap.innerHTML = '<span class="timeline-cap-badge">Awal Pendidikan</span>';
+                gridElement.appendChild(endCap);
+
                 displayPageSection({ showGrid: true });
             }
         } catch (error) {

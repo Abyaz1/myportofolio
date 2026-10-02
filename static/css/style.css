@@ -429,6 +429,282 @@ h1, .brand {
     background-color: var(--accent);
 }
 
+/* ==========================================================================
+   VERTICAL TIMELINE (EXPERIENCE & EDUCATION)
+   ========================================================================== */
+
+.timeline-container {
+    position: relative;
+    width: 100%;
+    margin: 2rem auto;
+    padding: 1rem 0 2rem;
+    box-sizing: border-box;
+}
+
+/* Vertical Spine in Timeline Mode */
+.timeline-container.is-timeline {
+    display: block;
+}
+
+.timeline-container.is-timeline::before {
+    content: "";
+    position: absolute;
+    top: 36px;
+    bottom: 36px;
+    left: 50%;
+    width: 4px;
+    background: var(--ink);
+    transform: translateX(-50%);
+    border-radius: 2px;
+    z-index: 1;
+}
+
+/* Timeline Caps (Top and Bottom badges) */
+.timeline-cap {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    justify-content: center;
+    margin: 1.5rem 0;
+}
+
+.timeline-container.is-grid .timeline-cap {
+    display: none;
+}
+
+.timeline-cap-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.4rem 1rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    background: var(--paper);
+    color: var(--ink);
+    border: 2px solid var(--ink);
+    border-radius: 999px;
+    box-shadow: 2px 2px 0px var(--ink);
+}
+
+.timeline-start-cap .timeline-cap-badge {
+    background: var(--ink);
+    color: var(--paper);
+}
+
+/* Timeline Items */
+.timeline-container.is-timeline .timeline-item {
+    position: relative;
+    width: 50%;
+    margin-bottom: 2.5rem;
+    z-index: 2;
+    box-sizing: border-box;
+}
+
+/* Left items */
+.timeline-container.is-timeline .timeline-item-left {
+    left: 0;
+    padding-right: 2.75rem;
+    padding-left: 0;
+}
+
+/* Right items */
+.timeline-container.is-timeline .timeline-item-right {
+    left: 50%;
+    padding-left: 2.75rem;
+    padding-right: 0;
+}
+
+/* Timeline Node / Marker */
+.timeline-marker {
+    position: absolute;
+    top: 24px;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--paper);
+    border: 2px solid var(--ink);
+    box-shadow: 2px 2px 0px var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink);
+    z-index: 4;
+    transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+                background-color 0.2s ease,
+                color 0.2s ease,
+                box-shadow 0.2s ease;
+}
+
+.timeline-container.is-timeline .timeline-item-left .timeline-marker {
+    right: -19px;
+    left: auto;
+}
+
+.timeline-container.is-timeline .timeline-item-right .timeline-marker {
+    left: -19px;
+    right: auto;
+}
+
+.timeline-item:hover .timeline-marker {
+    transform: scale(1.18);
+    background: var(--accent);
+    color: #ffffff;
+    box-shadow: 3px 3px 0px var(--ink);
+}
+
+/* Marker ongoing pulse indicator */
+.timeline-marker.is-ongoing {
+    border-color: var(--accent);
+    color: var(--accent-dark);
+}
+
+.timeline-marker.is-ongoing::after {
+    content: "";
+    position: absolute;
+    inset: -5px;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    animation: timeline-marker-ping 2.2s cubic-bezier(0, 0, 0.2, 1) infinite;
+    pointer-events: none;
+}
+
+@keyframes timeline-marker-ping {
+    0% {
+        transform: scale(0.95);
+        opacity: 0.85;
+    }
+    60%, 100% {
+        transform: scale(1.4);
+        opacity: 0;
+    }
+}
+
+/* Timeline Cards */
+.timeline-container.is-timeline .timeline-card {
+    position: relative;
+    width: 100%;
+}
+
+/* Triangular pointer pointing towards the spine */
+.timeline-container.is-timeline .timeline-item-left .timeline-card::after {
+    content: "";
+    position: absolute;
+    top: 30px;
+    right: -12px;
+    width: 0;
+    height: 0;
+    border-top: 9px solid transparent;
+    border-bottom: 9px solid transparent;
+    border-left: 12px solid var(--ink);
+    pointer-events: none;
+}
+
+.timeline-container.is-timeline .timeline-item-right .timeline-card::after {
+    content: "";
+    position: absolute;
+    top: 30px;
+    left: -12px;
+    width: 0;
+    height: 0;
+    border-top: 9px solid transparent;
+    border-bottom: 9px solid transparent;
+    border-right: 12px solid var(--ink);
+    pointer-events: none;
+}
+
+/* Card Header inside timeline cards */
+.timeline-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.75rem;
+}
+
+.timeline-card-header .experience-category,
+.timeline-card-header .education-category {
+    margin-bottom: 0;
+}
+
+.timeline-period-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--accent-dark);
+    background: #f7eedf;
+    border: 1px solid var(--line);
+    padding: 0.2rem 0.55rem;
+    border-radius: var(--radius);
+    letter-spacing: 0.02em;
+}
+
+/* Grid Mode Styles */
+.timeline-container.is-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.75rem;
+}
+
+.timeline-container.is-grid::before {
+    display: none;
+}
+
+.timeline-container.is-grid .timeline-item {
+    width: 100%;
+    left: auto !important;
+    right: auto !important;
+    padding: 0 !important;
+    margin-bottom: 0;
+}
+
+.timeline-container.is-grid .timeline-marker {
+    display: none;
+}
+
+.timeline-container.is-grid .timeline-card::after {
+    display: none !important;
+}
+
+/* Responsive adjustments for mobile and tablets */
+@media (max-width: 768px) {
+    .timeline-container.is-timeline::before {
+        left: 20px;
+        transform: none;
+    }
+
+    .timeline-container.is-timeline .timeline-cap {
+        justify-content: flex-start;
+        padding-left: 2px;
+    }
+
+    .timeline-container.is-timeline .timeline-item {
+        width: 100% !important;
+        left: 0 !important;
+        padding-left: 55px !important;
+        padding-right: 0 !important;
+        margin-bottom: 2rem;
+    }
+
+    .timeline-container.is-timeline .timeline-item-left .timeline-marker,
+    .timeline-container.is-timeline .timeline-item-right .timeline-marker {
+        left: 1px;
+        right: auto;
+    }
+
+    .timeline-container.is-timeline .timeline-item-left .timeline-card::after,
+    .timeline-container.is-timeline .timeline-item-right .timeline-card::after {
+        left: -12px;
+        right: auto;
+        border-left: none;
+        border-right: 12px solid var(--ink);
+    }
+}
+
 .project-form,
 .education-form {
     width: 100%;
@@ -524,6 +800,51 @@ h1, .brand {
 
 .project-header .section-title {
     margin-bottom: 0;
+}
+
+.project-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.view-switch {
+    display: inline-flex;
+    background: #ffffff;
+    border: 2px solid var(--ink);
+    border-radius: var(--radius);
+    box-shadow: 2px 2px 0px var(--ink);
+    overflow: hidden;
+    padding: 2px;
+    gap: 2px;
+}
+
+.view-switch-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 0.85rem;
+    font-size: 0.825rem;
+    font-weight: 700;
+    font-family: inherit;
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    line-height: 1.2;
+}
+
+.view-switch-btn:hover {
+    color: var(--ink);
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.view-switch-btn.is-active {
+    background: var(--ink);
+    color: var(--paper);
 }
 
 .project-grid {
