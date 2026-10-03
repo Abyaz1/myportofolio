@@ -9,18 +9,18 @@
 <main>
     <section class="experience-section" id="experience">
         <div class="container">
-            <p class="section-kicker">Perjalanan saya sejauh ini</p>
+            <p class="section-kicker" data-i18n="experience.kicker">Perjalanan saya sejauh ini</p>
             <div class="project-header">
                 <h1 class="section-title">Experience</h1>
                 <div class="project-header-actions">
                     <div class="view-switch" role="group" aria-label="Pilihan Tampilan">
                         <button type="button" class="view-switch-btn is-active" data-view="timeline" id="experience-view-timeline" title="Tampilan Timeline Vertikal">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v20M8 6h8M6 12h12M8 18h8"/></svg>
-                            Timeline
+                            <span data-i18n="view.timeline">Timeline</span>
                         </button>
                         <button type="button" class="view-switch-btn" data-view="grid" id="experience-view-grid" title="Tampilan Grid">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-                            Grid
+                            <span data-i18n="view.grid">Grid</span>
                         </button>
                     </div>
                     {% if user.is_superuser %}
@@ -28,7 +28,7 @@
                                 class="button project-add-button"
                                 popovertarget="add-experience-modal">
                             <span aria-hidden="true">+</span>
-                            Tambah Experience
+                            <span data-i18n="add.exp">Tambah Experience</span>
                         </button>
                     {% endif %}
                 </div>
@@ -41,20 +41,20 @@
                        name="title"
                        id="experience-search-input"
                        value="{{ title_query }}"
-                       placeholder="Cari berdasarkan nama experience"
+                       placeholder="Cari berdasarkan nama experience" data-i18n-placeholder="search.exp"
                        class="project-search__input"
                        aria-label="Cari berdasarkan nama experience">
-                <button type="submit" class="button">Cari</button>
+                <button type="submit" class="button" data-i18n="search.btn">Cari</button>
             </form>
 
             <div id="experience-loading-state" class="empty-state hide">
-                <p>Memuat data experience...</p>
+                <p data-i18n="state.loading.exp">Memuat data experience...</p>
             </div>
             <div id="experience-error-state" class="empty-state hide">
-                <p>Terjadi kesalahan saat memuat data. Silakan coba lagi.</p>
+                <p data-i18n="state.error">Terjadi kesalahan saat memuat data. Silakan coba lagi.</p>
             </div>
             <div id="experience-empty-state" class="empty-state hide">
-                <p>Belum ada pengalaman yang ditambahkan.</p>
+                <p data-i18n="state.empty.exp">Belum ada pengalaman yang ditambahkan.</p>
             </div>
 
             <div id="experience-grid" class="experience-grid timeline-container is-timeline"></div>

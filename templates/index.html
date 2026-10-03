@@ -6,7 +6,7 @@
     <section class="hero" id="profile">
         <div class="container hero-grid">
             <div class="hero-identity">
-                <p class="hero-kicker">Computer Science &middot; Universitas Indonesia</p>
+                <p class="hero-kicker" data-i18n="hero.kicker">Computer Science &middot; Universitas Indonesia</p>
                 <h1>{{ name }}</h1>
             </div>
             <div class="hero-photo">
@@ -14,19 +14,19 @@
                 <img class="avatar" src="{% static 'img/Abyaz.jpg' %}" alt="Photo of {{ name }}">
             </div>
             <div class="hero-details">
-                <p class="bio">{{ bio }}</p>
+                <p class="bio" data-i18n="bio">{{ bio }}</p>
                 <dl class="meta-list">
                     <div class="meta-row">
-                        <dt>NPM</dt>
+                        <dt data-i18n="meta.npm">NPM</dt>
                         <dd>{{ npm }}</dd>
                     </div>
                     <div class="meta-row">
-                        <dt>Program</dt>
+                        <dt data-i18n="meta.program">Program</dt>
                         <dd>{{ study_program }}</dd>
                     </div>
                     <div class="meta-row">
-                        <dt>Sesi Terakhir Login</dt>
-                        <dd>{{ last_login }}</dd>
+                        <dt data-i18n="meta.lastlogin">Sesi Terakhir Login</dt>
+                        <dd data-i18n="{% if last_login == 'Belum ada sesi login / Cookie tidak ditemukan' %}meta.nologin{% endif %}">{{ last_login }}</dd>
                     </div>
                 </dl>
                 <div class="social-links">
@@ -40,12 +40,12 @@
 
     <section class="skills-section" id="skills">
         <div class="container">
-            <h2 class="section-title">Skills & Interests</h2>
+            <h2 class="section-title" data-i18n="skills.title">Skills & Interests</h2>
             <div class="skills-grid">
                 <article class="skill-card">
                     <div>
-                        <h3>Data Science</h3>
-                        <p>Experience with data analysis, visualization, and statistical modeling.</p>
+                        <h3 data-i18n="skills.ds">Data Science</h3>
+                        <p data-i18n="skills.ds.desc">Experience with data analysis, visualization, and statistical modeling.</p>
                     </div>
                     <div class="skill-tags">
                         <span class="tag">Python</span>
@@ -56,8 +56,8 @@
 
                 <article class="skill-card">
                     <div>
-                        <h3>AI / ML</h3>
-                        <p>Knowledge of machine learning algorithms, deep learning, and neural networks.</p>
+                        <h3 data-i18n="skills.ai">AI / ML</h3>
+                        <p data-i18n="skills.ai.desc">Knowledge of machine learning algorithms, deep learning, and neural networks.</p>
                     </div>
                     <div class="skill-tags">
                         <span class="tag">Scikit-Learn</span>
@@ -68,8 +68,8 @@
 
                 <article class="skill-card">
                     <div>
-                        <h3>Web Development</h3>
-                        <p>Proficient in building responsive web apps with HTML, CSS, JavaScript, and Django.</p>
+                        <h3 data-i18n="skills.web">Web Development</h3>
+                        <p data-i18n="skills.web.desc">Proficient in building responsive web apps with HTML, CSS, JavaScript, and Django.</p>
                     </div>
                     <div class="skill-tags">
                         <span class="tag">Django</span>
@@ -83,22 +83,22 @@
 
     <section class="mading-section" id="mading">
         <div class="container">
-            <h2 class="section-title">Mading Pesan</h2>
-            <p class="section-kicker">Tinggalkan jejak, pesan, atau kesan di sini</p>
+            <h2 class="section-title" data-i18n="mading.title">Mading Pesan</h2>
+            <p class="section-kicker" data-i18n="mading.kicker">Tinggalkan jejak, pesan, atau kesan di sini</p>
 
             <div class="mading-form-container">
                 <form method="post" action="{% url 'main:create_mading' %}" class="project-form">
                     {% csrf_token %}
                     {% for field in mading_form %}
                         <div class="form-group">
-                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            <label for="{{ field.id_for_label }}" {% if field.name == 'name' %}data-i18n="mading.name"{% elif field.name == 'message' %}data-i18n="mading.message"{% endif %}>{{ field.label }}</label>
                             {{ field }}
                             {% for error in field.errors %}
                                 <p class="form-error">{{ error }}</p>
                             {% endfor %}
                         </div>
                     {% endfor %}
-                    <button type="submit" class="button">Post Pesan ke Mading</button>
+                    <button type="submit" class="button" data-i18n="mading.post">Post Pesan ke Mading</button>
                 </form>
             </div>
 
@@ -140,7 +140,7 @@
                         </div>
                     </article>
                 {% empty %}
-                    <p class="empty-state">Belum ada pesan di mading. Jadilah yang pertama mengirim pesan!</p>
+                    <p class="empty-state" data-i18n="mading.empty">Belum ada pesan di mading. Jadilah yang pertama mengirim pesan!</p>
                 {% endfor %}
             </div>
         </div>

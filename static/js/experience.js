@@ -74,21 +74,32 @@ document.addEventListener('DOMContentLoaded', function () {
             .replaceAll("'", '&#39;');
     }
 
+    function t(key, fallback = '') {
+        if (window.portfolioI18n && typeof window.portfolioI18n.t === 'function') {
+            return window.portfolioI18n.t(key, fallback);
+        }
+        return fallback;
+    }
+
     function formatPeriod(startedAt, endedAt, isOngoing) {
+        const presentLabel = t('period.present', 'Sekarang');
         if (!startedAt) {
-            return isOngoing ? 'Sedang Berlangsung' : 'Selesai';
+            return isOngoing ? t('status.ongoing', 'Sedang berlangsung') : t('status.ended', 'Selesai');
         }
         try {
+            const lang = window.portfolioI18n && typeof window.portfolioI18n.getLang === 'function'
+                ? window.portfolioI18n.getLang() : 'id';
+            const locale = lang === 'en' ? 'en-US' : 'id-ID';
             const startDate = new Date(startedAt);
-            const startStr = startDate.toLocaleDateString('id-ID', { month: 'short', year: 'numeric' });
+            const startStr = startDate.toLocaleDateString(locale, { month: 'short', year: 'numeric' });
             if (isOngoing || !endedAt) {
-                return `${startStr} — Sekarang`;
+                return `${startStr} — ${presentLabel}`;
             }
             const endDate = new Date(endedAt);
-            const endStr = endDate.toLocaleDateString('id-ID', { month: 'short', year: 'numeric' });
+            const endStr = endDate.toLocaleDateString(locale, { month: 'short', year: 'numeric' });
             return `${startStr} — ${endStr}`;
         } catch (e) {
-            return isOngoing ? 'Sedang Berlangsung' : 'Selesai';
+            return isOngoing ? t('status.ongoing', 'Sedang berlangsung') : t('status.ended', 'Selesai');
         }
     }
 
@@ -110,7 +121,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const rawCategory = item.category || (item.fields && item.fields.category) || '';
         const categoryText = item.category_display || categoryMap[rawCategory] || rawCategory;
         const isOngoing = item.is_ongoing !== undefined ? item.is_ongoing : !(item.fields && item.fields.ended_at);
-        const statusText = isOngoing ? 'Sedang berlangsung' : 'Selesai';
+        const statusText = isOngoing ? t('status.ongoing', 'Sedang berlangsung') : t('status.ended', 'Selesai');
         const thumbnail = item.thumbnail !== undefined ? item.thumbnail : (item.fields && item.fields.thumbnail);
         const startedAt = item.started_at || (item.fields && item.fields.started_at);
         const endedAt = item.ended_at || (item.fields && item.fields.ended_at);
@@ -120,8 +131,15 @@ document.addEventListener('DOMContentLoaded', function () {
         const starCount = item.star_count !== undefined ? item.star_count : starredUsers.length;
         const isStarred = item.is_starred !== undefined ? item.is_starred : (currentUsername && starredUsers.includes(currentUsername));
         const starTitle = starCount > 0
-            ? `Dibintangi oleh ${starredUsers.join(', ')}`
-            : 'Jadilah yang pertama memberi star';
+            ? `${t('star.by', 'Dibintangi oleh')} ${starredUsers.join(', ')}`
+            : t('star.be_first', 'Jadilah yang pertama memberi star');
+
+        const editBtn = t('btn.edit', 'Ubah');
+        const deleteBtn = t('btn.delete', 'Hapus');
+        const cancelBtn = t('btn.cancel', 'Batal');
+        const confirmDeleteBtn = t('btn.confirm_delete', 'Ya, Hapus');
+        const deleteTitle = t('modal.delete_exp_title', 'Hapus Experience?');
+        const confirmPrompt = t('modal.confirm_p1', 'Apakah Anda yakin ingin menghapus');
 
         const thumbnailHtml = thumbnail
             ? `<img src="${escapeHtml(thumbnail)}" alt="Gambar ${escapeHtml(title)}" class="project-image">`
@@ -141,7 +159,7 @@ document.addEventListener('DOMContentLoaded', function () {
         `;
 
         if (isSuperuser || isEditor) {
-            actionsHtml += `<a href="/experience/${id}/edit/" class="button button-secondary">Ubah</a>\n`;
+            actionsHtml += `<a href="/experience/${id}/edit/" class="button button-secondary">${escapeHtml(editBtn)}</a>\n`;
         }
 
         if (isSuperuser) {
@@ -149,9 +167,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 <button type="button"
                         class="button button-danger"
                         popovertarget="delete-experience-${id}"
-                        aria-label="Hapus ${escapeHtml(title)}"
-                        title="Hapus experience">
-                    Hapus
+                        aria-label="${escapeHtml(deleteBtn)} ${escapeHtml(title)}"
+                        title="${escapeHtml(deleteBtn)} experience">
+                    ${escapeHtml(deleteBtn)}
                 </button>
                 <div id="delete-experience-${id}"
                      class="project-delete-modal"
@@ -170,19 +188,19 @@ document.addEventListener('DOMContentLoaded', function () {
                                 popovertarget="delete-experience-${id}"
                                 popovertargetaction="hide"
                                 aria-label="Tutup konfirmasi hapus">×</button>
-                        <h2 id="delete-experience-title-${id}">Hapus Experience?</h2>
+                        <h2 id="delete-experience-title-${id}">${escapeHtml(deleteTitle)}</h2>
                         <p>
-                            Apakah Anda yakin ingin menghapus
+                            ${escapeHtml(confirmPrompt)}
                             <strong>${escapeHtml(title)}</strong>?
                         </p>
                         <div class="project-delete-modal__actions">
                             <button type="button"
                                     class="button button-secondary"
                                     popovertarget="delete-experience-${id}"
-                                    popovertargetaction="hide">Batal</button>
+                                    popovertargetaction="hide">${escapeHtml(cancelBtn)}</button>
                             <form method="post" action="/experience/${id}/delete/">
                                 <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
-                                <button type="submit" class="button button-danger">Ya, Hapus</button>
+                                <button type="submit" class="button button-danger">${escapeHtml(confirmDeleteBtn)}</button>
                             </form>
                         </div>
                     </div>
@@ -230,6 +248,45 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     let currentController = null;
+    let currentData = [];
+
+    function renderExperienceList(data) {
+        currentData = data || [];
+        gridElement.innerHTML = '';
+
+        if (currentData.length === 0) {
+            if (emptyElement && emptyElement.querySelector('p')) {
+                const query = searchInput.value.trim();
+                emptyElement.querySelector('p').textContent = query
+                    ? t('state.empty_search.exp', 'Tidak ada experience dengan nama tersebut.')
+                    : t('state.empty.exp', 'Belum ada pengalaman yang ditambahkan.');
+            }
+            displayPageSection({ showEmpty: true });
+        } else {
+            const startCap = document.createElement('div');
+            startCap.className = 'timeline-cap timeline-start-cap';
+            startCap.innerHTML = `<span class="timeline-cap-badge">${escapeHtml(t('timeline.latest', 'Terbaru / Sekarang'))}</span>`;
+            gridElement.appendChild(startCap);
+
+            currentData.forEach((item, index) => {
+                const card = buildExperienceCardElement(item, index);
+                gridElement.appendChild(card);
+            });
+
+            const endCap = document.createElement('div');
+            endCap.className = 'timeline-cap timeline-end-cap';
+            endCap.innerHTML = `<span class="timeline-cap-badge">${escapeHtml(t('timeline.start.exp', 'Awal Pengalaman'))}</span>`;
+            gridElement.appendChild(endCap);
+
+            displayPageSection({ showGrid: true });
+        }
+    }
+
+    window.addEventListener('portfolio:langchange', function () {
+        if (currentData && currentData.length > 0) {
+            renderExperienceList(currentData);
+        }
+    });
 
     async function fetchExperiences(query = '') {
         if (currentController) {
@@ -248,34 +305,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             const data = await response.json();
-
-            gridElement.innerHTML = '';
-
-            if (data.length === 0) {
-                if (emptyElement && emptyElement.querySelector('p')) {
-                    emptyElement.querySelector('p').textContent = query
-                        ? 'Tidak ada experience dengan nama tersebut.'
-                        : 'Belum ada pengalaman yang ditambahkan.';
-                }
-                displayPageSection({ showEmpty: true });
-            } else {
-                const startCap = document.createElement('div');
-                startCap.className = 'timeline-cap timeline-start-cap';
-                startCap.innerHTML = '<span class="timeline-cap-badge">Terbaru / Sekarang</span>';
-                gridElement.appendChild(startCap);
-
-                data.forEach((item, index) => {
-                    const card = buildExperienceCardElement(item, index);
-                    gridElement.appendChild(card);
-                });
-
-                const endCap = document.createElement('div');
-                endCap.className = 'timeline-cap timeline-end-cap';
-                endCap.innerHTML = '<span class="timeline-cap-badge">Awal Pengalaman</span>';
-                gridElement.appendChild(endCap);
-
-                displayPageSection({ showGrid: true });
-            }
+            renderExperienceList(data);
         } catch (error) {
             if (error.name === 'AbortError') return;
             console.error('Error loading experiences:', error);
