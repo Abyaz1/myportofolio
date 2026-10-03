@@ -12,6 +12,7 @@
     --line: #e3d9c9;
     --text-muted: #6b6459;
     --radius: 4px;
+    --edge: #1c1917;
     --surface: #ffffff;
     --surface-alt: #f7eedf;
     --danger: #b42318;
@@ -26,6 +27,7 @@
     --accent-dark: #e98a69;
     --line: #3a3329;
     --text-muted: #a89f90;
+    --edge: #8a8070;
     --surface: #211d17;
     --surface-alt: #2a251d;
     --danger: #f97066;
@@ -215,7 +217,7 @@ h1, .brand {
     aspect-ratio: 1 / 1;
     object-fit: cover;
     border-radius: var(--radius);
-    border: 3px solid var(--ink);
+    border: 3px solid var(--edge);
 }
 
 /* Skills Section Styles */
@@ -251,10 +253,10 @@ h1, .brand {
 
 .skill-card {
     background-color: var(--surface);
-    border: 2px solid var(--ink);
+    border: 2px solid var(--edge);
     border-radius: var(--radius);
     padding: 1.75rem;
-    box-shadow: 4px 4px 0px var(--ink);
+    box-shadow: 4px 4px 0px var(--edge);
     transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
     display: flex;
     flex-direction: column;
@@ -264,7 +266,7 @@ h1, .brand {
 .skill-card:hover {
     transform: translateY(-6px);
     box-shadow: 8px 8px 0px var(--accent);
-    border-color: var(--ink);
+    border-color: var(--edge);
 }
 
 .skill-card h3 {
@@ -359,10 +361,10 @@ h1, .brand {
 .experience-card,
 .education-card {
     background-color: var(--surface);
-    border: 2px solid var(--ink);
+    border: 2px solid var(--edge);
     border-radius: var(--radius);
     padding: 1.75rem;
-    box-shadow: 4px 4px 0px var(--ink);
+    box-shadow: 4px 4px 0px var(--edge);
     transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
     display: flex;
     flex-direction: column;
@@ -373,7 +375,7 @@ h1, .brand {
 .education-card:hover {
     transform: translateY(-6px);
     box-shadow: 8px 8px 0px var(--accent);
-    border-color: var(--ink);
+    border-color: var(--edge);
 }
 
 .experience-category,
@@ -503,9 +505,9 @@ h1, .brand {
     text-transform: uppercase;
     background: var(--paper);
     color: var(--ink);
-    border: 2px solid var(--ink);
+    border: 2px solid var(--edge);
     border-radius: 999px;
-    box-shadow: 2px 2px 0px var(--ink);
+    box-shadow: 2px 2px 0px var(--edge);
 }
 
 .timeline-start-cap .timeline-cap-badge {
@@ -544,8 +546,8 @@ h1, .brand {
     height: 38px;
     border-radius: 50%;
     background: var(--paper);
-    border: 2px solid var(--ink);
-    box-shadow: 2px 2px 0px var(--ink);
+    border: 2px solid var(--edge);
+    box-shadow: 2px 2px 0px var(--edge);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -571,7 +573,7 @@ h1, .brand {
     transform: scale(1.18);
     background: var(--accent);
     color: #ffffff;
-    box-shadow: 3px 3px 0px var(--ink);
+    box-shadow: 3px 3px 0px var(--edge);
 }
 
 /* Marker ongoing pulse indicator */
@@ -617,7 +619,7 @@ h1, .brand {
     height: 0;
     border-top: 9px solid transparent;
     border-bottom: 9px solid transparent;
-    border-left: 12px solid var(--ink);
+    border-left: 12px solid var(--edge);
     pointer-events: none;
 }
 
@@ -630,7 +632,7 @@ h1, .brand {
     height: 0;
     border-top: 9px solid transparent;
     border-bottom: 9px solid transparent;
-    border-right: 12px solid var(--ink);
+    border-right: 12px solid var(--edge);
     pointer-events: none;
 }
 
@@ -721,7 +723,7 @@ h1, .brand {
         left: -12px;
         right: auto;
         border-left: none;
-        border-right: 12px solid var(--ink);
+        border-right: 12px solid var(--edge);
     }
 }
 
@@ -777,7 +779,7 @@ h1, .brand {
     justify-content: center;
     gap: 0.45rem;
     height: fit-content;
-    border: 2px solid var(--ink);
+    border: 2px solid var(--edge);
     border-radius: var(--radius);
     padding: 0.55rem 1.1rem;
     background: var(--accent);
@@ -787,18 +789,18 @@ h1, .brand {
     font-size: 0.85rem;
     font-weight: 700;
     text-decoration: none;
-    box-shadow: 2px 2px 0px var(--ink);
+    box-shadow: 2px 2px 0px var(--edge);
     transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.2s ease;
 }
 
 .button:hover {
     transform: translate(-1px, -1px);
-    box-shadow: 3px 3px 0px var(--ink);
+    box-shadow: 3px 3px 0px var(--edge);
 }
 
 .button:active {
     transform: translate(1px, 1px);
-    box-shadow: 1px 1px 0px var(--ink);
+    box-shadow: 1px 1px 0px var(--edge);
 }
 
 .button-secondary {
@@ -834,9 +836,9 @@ h1, .brand {
 .view-switch {
     display: inline-flex;
     background: var(--surface);
-    border: 2px solid var(--ink);
+    border: 2px solid var(--edge);
     border-radius: var(--radius);
-    box-shadow: 2px 2px 0px var(--ink);
+    box-shadow: 2px 2px 0px var(--edge);
     overflow: hidden;
     padding: 2px;
     gap: 2px;
@@ -884,7 +886,7 @@ h1, .brand {
     height: 135px;
     object-fit: contain;
     background-color: var(--surface);
-    border: 2px solid var(--ink);
+    border: 2px solid var(--edge);
     border-radius: var(--radius);
     padding: 0.5rem;
     margin-bottom: 0.75rem;
@@ -917,11 +919,11 @@ h1, .brand {
     min-width: 0;
     height: 46px;
     padding: 0 1rem;
-    border: 2px solid var(--ink);
+    border: 2px solid var(--edge);
     border-radius: var(--radius);
     background: var(--surface);
     color: var(--ink);
-    box-shadow: 2px 2px 0px var(--ink);
+    box-shadow: 2px 2px 0px var(--edge);
     font: inherit;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
     -webkit-appearance: none;
@@ -938,7 +940,7 @@ h1, .brand {
 .project-search .button {
     height: 46px;
     padding: 0 1.5rem;
-    box-shadow: 2px 2px 0px var(--ink);
+    box-shadow: 2px 2px 0px var(--edge);
     box-sizing: border-box;
     white-space: nowrap;
 }
@@ -1022,9 +1024,9 @@ h1, .brand {
     width: min(100%, 480px);
     padding: 1.75rem;
     background: var(--paper);
-    border: 2px solid var(--ink);
+    border: 2px solid var(--edge);
     border-radius: var(--radius);
-    box-shadow: 8px 8px 0px var(--ink);
+    box-shadow: 8px 8px 0px var(--edge);
 }
 
 .project-delete-modal__content h2 {
@@ -1212,10 +1214,10 @@ h1, .brand {
 
 .mading-form-container {
     background-color: var(--surface);
-    border: 2px solid var(--ink);
+    border: 2px solid var(--edge);
     border-radius: var(--radius);
     padding: 1.75rem;
-    box-shadow: 4px 4px 0px var(--ink);
+    box-shadow: 4px 4px 0px var(--edge);
     margin: 1.5rem 0 2.5rem;
 }
 
@@ -1231,10 +1233,10 @@ h1, .brand {
 
 .mading-card {
     background-color: var(--surface);
-    border: 2px solid var(--ink);
+    border: 2px solid var(--edge);
     border-radius: var(--radius);
     padding: 1.5rem;
-    box-shadow: 4px 4px 0px var(--ink);
+    box-shadow: 4px 4px 0px var(--edge);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     display: flex;
     flex-direction: column;
@@ -1313,14 +1315,14 @@ h1, .brand {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border: 2px solid var(--ink);
+    border: 2px solid var(--edge);
     border-radius: var(--radius);
     background-color: var(--paper);
     color: var(--ink);
     font-size: 1rem;
     font-weight: 700;
     cursor: pointer;
-    box-shadow: 2px 2px 0px var(--ink);
+    box-shadow: 2px 2px 0px var(--edge);
     transition: all 0.15s ease;
     padding: 0;
     line-height: 1;
@@ -1330,12 +1332,12 @@ h1, .brand {
     background-color: var(--accent);
     color: white;
     transform: translate(-1px, -1px);
-    box-shadow: 3px 3px 0px var(--ink);
+    box-shadow: 3px 3px 0px var(--edge);
 }
 
 .button-counter:active {
     transform: translate(1px, 1px);
-    box-shadow: 1px 1px 0px var(--ink);
+    box-shadow: 1px 1px 0px var(--edge);
 }
 
 .button-sm {
@@ -1353,9 +1355,9 @@ h1, .brand {
     gap: 0.4rem;
     background: var(--ink);
     color: var(--paper);
-    border: 2px solid var(--ink);
+    border: 2px solid var(--edge);
     border-radius: var(--radius);
-    box-shadow: 2px 2px 0px var(--ink);
+    box-shadow: 2px 2px 0px var(--edge);
     padding: 0.5rem 0.9rem;
     font-size: 0.85rem;
     font-weight: 700;
@@ -1365,18 +1367,18 @@ h1, .brand {
 
 .button-star:hover {
     transform: translate(-1px, -1px);
-    box-shadow: 3px 3px 0px var(--ink);
+    box-shadow: 3px 3px 0px var(--edge);
 }
 
 .button-star:active {
     transform: translate(1px, 1px);
-    box-shadow: 1px 1px 0px var(--ink);
+    box-shadow: 1px 1px 0px var(--edge);
 }
 
 .button-star.is-starred {
     background: var(--accent);
     color: white;
-    border-color: var(--ink);
+    border-color: var(--edge);
 }
 
 .star-count {

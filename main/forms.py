@@ -110,12 +110,14 @@ class MadingForm(ModelForm):
             "name": TextInput(
                 attrs={
                     "placeholder": "Masukkan nama Anda",
+                    "data-i18n-placeholder": "mading.name.ph",
                     "maxlength": 100,
                 }
             ),
             "message": Textarea(
                 attrs={
                     "placeholder": "Tuliskan pesan mading di sini...",
+                    "data-i18n-placeholder": "mading.message.ph",
                     "rows": 3,
                 }
             ),
