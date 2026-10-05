@@ -218,7 +218,8 @@ Progres pengembangan proyek portofolio pribadi berdasarkan riwayat commit dan ri
 - Perlindungan XSS: `strip_tags` pada `clean_<field>` di `ModelForm` serta `escapeHtml`/`textContent` pada semua nilai yang disisipkan lewat JavaScript.
 - Tampilan Vertikal Timeline: Halaman Experience dan Education dilengkapi tampilan timeline vertikal selain grid.
 - Fitur Tambahan: Dark mode (preferensi tersimpan, mengikuti pengaturan sistem pada kunjungan pertama) dan pilihan bahasa Indonesia/Inggris pada seluruh antarmuka, termasuk teks yang dibuat lewat JavaScript.
-- Unit Test: Menambah pengujian untuk CSRF, otorisasi per peran, status 400/403/405, sanitasi `strip_tags`, endpoint JSON dan pencarian, like mading, serta konsistensi terjemahan (total 63 tes lulus).
+- Chatbot Sederhana: Widget chat di semua halaman yang mencocokkan kata kunci pertanyaan (endpoint `/api/chatbot/`), menarik data Experience, Education, dan Mading dari database, memakai template jawaban untuk pertanyaan umum (profil, skill, kontak), dan menolak pertanyaan di luar topik dengan "Informasi tidak tersedia". Mendukung bahasa Indonesia/Inggris dan menampilkan jawaban dengan `textContent`.
+- Unit Test: Menambah pengujian untuk CSRF, otorisasi per peran, status 400/403/405, sanitasi `strip_tags`, endpoint JSON dan pencarian, like mading, serta konsistensi terjemahan (total 84 tes lulus).
 
 ## AI Disclosure
 
