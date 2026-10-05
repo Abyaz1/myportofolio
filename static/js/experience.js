@@ -373,7 +373,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             .map(err => (typeof err === 'object' && err.message) ? err.message : String(err))
                             .join(', ');
                         if (errorDetails) {
-                            errorMsg += `: ${errorDetails}`;
+                            errorMsg = errorDetails;
                         }
                     }
                     if (typeof showToast === 'function') {
