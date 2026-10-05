@@ -13,6 +13,7 @@ Website portofolio statis yang dirancang menggunakan framework Django, struktur 
 - [Tugas 1](#tugas-1)
 - [Tugas 2](#tugas-2)
 - [Tugas 3](#tugas-3)
+- [Tugas 5](#tugas-5)
 - [Progress Mingguan](#progress-mingguan)
 - [AI Disclosure](#ai-disclosure)
 - [Kontak](#kontak)
@@ -162,6 +163,25 @@ Alurnya dimulai ketika klien mengirimkan request GET ke endpoint URL. Rute pada 
 Serialization diperlukan karena objek model Django merupakan objek Python di memori server yang tidak dapat dikirimkan langsung melalui protokol HTTP. Serialisasi menerjemahkan objek tersebut ke format teks universal (JSON) agar dapat dikirim lewat jaringan dan dipahami oleh berbagai platform klien.
 
 
+## Tugas 5
+
+### 1. Debouncing dan Alasan Pentingnya pada Pencarian AJAX
+Debouncing adalah teknik menunda eksekusi sebuah fungsi sampai pengguna berhenti melakukan aksi selama jeda tertentu. Pada kolom pencarian, setiap ketikan memulai ulang timer; permintaan baru dikirim hanya jika tidak ada ketikan lagi selama jeda tersebut. Di proyek ini jedanya 300 ms (`SEARCH_DEBOUNCE_DELAY` pada `experience.js` dan `education.js`) menggunakan `setTimeout` dan `clearTimeout`.
+
+Teknik ini penting karena tanpa debouncing, mengetik "magang" akan mengirim enam request `fetch()` ke `/api/experiences/` (satu per huruf). Akibatnya server dan database terbebani query yang tidak perlu dan antarmuka bisa berkedip karena render ulang berulang. Lebih buruk lagi, response dari request lama bisa tiba setelah response request yang lebih baru sehingga hasil yang tampil tidak sesuai dengan teks pencarian terakhir. Dengan debouncing (ditambah `AbortController` untuk membatalkan request yang masih berjalan), hanya satu request yang dikirim setelah pengguna selesai mengetik, sehingga pencarian lebih hemat, responsif, dan hasilnya konsisten.
+
+### 2. Fungsi `await` pada `fetch()`
+`fetch()` bersifat asinkron dan langsung mengembalikan sebuah Promise, bukan response yang sebenarnya, karena permintaan jaringan butuh waktu. Kata kunci `await` (di dalam fungsi `async`) menjeda eksekusi fungsi tersebut sampai Promise selesai dan memberikan nilai hasilnya, sehingga kode berikutnya dapat berjalan secara berurutan dan mudah dibaca, misalnya `const response = await fetch(url);` lalu `const data = await response.json();`. Penjedaan ini hanya berlaku di fungsi itu saja; halaman tetap responsif karena thread utama tidak diblokir. Dengan `await`, kita juga dapat menangani kegagalan jaringan memakai `try...catch`.
+
+Jika `await` tidak digunakan, variabel `response` hanya berisi objek Promise yang belum terselesaikan. Memanggil `response.json()` atau mengakses `response.ok` akan salah (bukan data yang diharapkan), dan kode setelah `fetch()` berjalan sebelum data tiba, sehingga daftar tampil kosong atau `undefined`. Error jaringan juga tidak tertangkap oleh `try...catch` dan berubah menjadi unhandled promise rejection. Alternatifnya adalah merangkai `.then()`, tetapi kode menjadi lebih bertingkat dan sulit dibaca.
+
+### 3. Serangan XSS dan Risikonya pada Data AJAX
+Cross-Site Scripting (XSS) adalah serangan ketika penyerang menyisipkan skrip berbahaya (misalnya `<script>` atau `<img src=x onerror=...>`) ke dalam input yang kemudian ditampilkan di halaman, sehingga skrip tersebut dieksekusi di browser korban. Dampaknya dapat berupa pencurian cookie/sesi, aksi atas nama pengguna, pengalihan ke situs palsu, atau pengubahan tampilan halaman.
+
+Data yang ditampilkan lewat AJAX/JavaScript lebih rentan daripada template Django karena template Django melakukan autoescape secara otomatis: karakter seperti `<`, `>`, `"`, dan `'` pada `{{ variabel }}` diubah menjadi entitas HTML yang aman. Pada AJAX, kita sendiri yang menyusun HTML di JavaScript, misalnya dengan template literal yang disisipkan ke `innerHTML`. Browser menganggap string itu sebagai HTML mentah sehingga tag dan atribut event di dalamnya ikut dieksekusi, kecuali developer secara manual melakukan escaping pada setiap nilai. Satu nilai yang terlewat sudah cukup untuk membuka celah.
+
+Pada proyek ini perlindungan diterapkan berlapis: (1) di sisi server, `strip_tags` pada method `clean_<field>` di `ModelForm` membuang tag HTML sebelum data disimpan, dan input yang hanya berisi tag ditolak; (2) di sisi klien, semua nilai teks yang disisipkan ke HTML melewati fungsi `escapeHtml`, sedangkan toast memakai `textContent`.
+
 ## Progress Mingguan
 
 Progres pengembangan proyek portofolio pribadi berdasarkan riwayat commit dan rincian pengerjaan tugas:
@@ -189,6 +209,16 @@ Progres pengembangan proyek portofolio pribadi berdasarkan riwayat commit dan ri
 - Hak Akses Peran (Role-Based Access Control): Menerapkan pembatasan hak akses berbasis peran (seperti peran Editor) untuk tindakan ubah dan hapus pada data portofolio.
 - Fitur Edit Mading & Star Education & Experience: Menambahkan fitur edit pada mading pesan serta penandaan bintang (*star*) pada kartu data pendidikan (`Education`) dan pengalaman (`Experience`).
 
+
+### Minggu 5 - Tutorial 5: AJAX, Modal, Toast, & Perlindungan XSS
+- Menampilkan Data dengan AJAX: Halaman Experience dan Education kini hanya merender kerangka halaman, lalu data diambil dengan `fetch()` dari endpoint JSON (`/api/experiences/` dan `/api/educations/`) yang disusun manual dengan `JsonResponse`, termasuk jumlah star dan status star pengguna yang login. Tersedia kondisi loading, data kosong, dan error.
+- Pencarian dengan Debouncing: Pencarian berbasis AJAX tanpa reload halaman dengan jeda 300 ms dan `AbortController` untuk membatalkan request lama.
+- Tambah Data dengan Modal dan AJAX: Form tambah Experience dan Education tampil di modal; view `POST` memvalidasi dengan `ModelForm` dan membalas JSON dengan status 201, 400, atau 403. Hak akses diperiksa di dalam view dan token CSRF dikirim pada setiap request. Daftar diperbarui tanpa reload.
+- Notifikasi Toast: Toast muncul saat berhasil maupun gagal, termasuk pesan validasi dari server (tanpa duplikasi pesan).
+- Perlindungan XSS: `strip_tags` pada `clean_<field>` di `ModelForm` serta `escapeHtml`/`textContent` pada semua nilai yang disisipkan lewat JavaScript.
+- Tampilan Vertikal Timeline: Halaman Experience dan Education dilengkapi tampilan timeline vertikal selain grid.
+- Fitur Tambahan: Dark mode (preferensi tersimpan, mengikuti pengaturan sistem pada kunjungan pertama) dan pilihan bahasa Indonesia/Inggris pada seluruh antarmuka, termasuk teks yang dibuat lewat JavaScript.
+- Unit Test: Menambah pengujian untuk CSRF, otorisasi per peran, status 400/403/405, sanitasi `strip_tags`, endpoint JSON dan pencarian, like mading, serta konsistensi terjemahan (total 63 tes lulus).
 
 ## AI Disclosure
 
