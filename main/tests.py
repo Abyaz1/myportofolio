@@ -980,3 +980,146 @@ class ThemeAndLanguageTest(TestCase):
     def test_search_inputs_are_translatable(self):
         self.assertContains(self.client.get(reverse("main:show_experience")), 'data-i18n-placeholder="search.exp"')
         self.assertContains(self.client.get(reverse("main:show_education")), 'data-i18n-placeholder="search.edu"')
+
+
+class ChatbotTest(TestCase):
+    """Chatbot berbasis kata kunci: tarik data dari database atau tolak dengan 'informasi tidak tersedia'."""
+
+    def setUp(self):
+        self.exp = Experience.objects.create(
+            title="Magang Data Analyst", description="Menganalisis data penjualan.", category="internship"
+        )
+        self.edu = Education.objects.create(institution="Universitas Indonesia", Activity="S1 Ilmu Komputer")
+        Mading.objects.create(name="Tamu", message="Keren banget portofolionya!")
+
+    def _ask(self, q, lang="id"):
+        resp = self.client.get(reverse("main:chatbot_api"), {"q": q, "lang": lang})
+        self.assertEqual(resp.status_code, 200)
+        return resp.json()
+
+    # --- Endpoint ---
+    def test_endpoint_rejects_empty_question(self):
+        for params in ({}, {"q": ""}, {"q": "   "}):
+            resp = self.client.get(reverse("main:chatbot_api"), params)
+            self.assertEqual(resp.status_code, 400)
+            self.assertEqual(resp.json()["status"], "error")
+
+    def test_endpoint_rejects_non_get_method(self):
+        resp = self.client.post(reverse("main:chatbot_api"), {"q": "halo"})
+        self.assertEqual(resp.status_code, 405)
+
+    def test_endpoint_is_open_for_anonymous_visitors(self):
+        data = self._ask("siapa kamu?")
+        self.assertEqual(data["status"], "success")
+        self.assertTrue(data["found"])
+
+    # --- Template jawaban (pertanyaan umum) ---
+    def test_profile_templates(self):
+        self.assertIn("M Naufal Abyaz Bawono", self._ask("Siapa kamu?")["answer"])
+        self.assertIn("2506656993", self._ask("berapa npm nya?")["answer"])
+        self.assertIn("Ilmu Komputer", self._ask("apa jurusannya?")["answer"])
+        self.assertIn("Python", self._ask("apa saja skill nya")["answer"])
+        contact = self._ask("bagaimana cara menghubungi lewat email?")["answer"]
+        self.assertIn("abyazbawono@gmail.com", contact)
+        self.assertIn("github.com/Abyaz1", contact)
+
+    def test_greeting_thanks_and_help(self):
+        self.assertIn("Halo", self._ask("halo")["answer"])
+        self.assertIn("Sama-sama", self._ask("terima kasih")["answer"])
+        self.assertIn("Topik", self._ask("bantuan")["answer"])
+
+    # --- Tarik data dari database ---
+    def test_experience_list_comes_from_database(self):
+        data = self._ask("pengalaman apa saja?")
+        self.assertTrue(data["found"])
+        self.assertIn("Magang Data Analyst", data["answer"])
+
+    def test_education_list_comes_from_database(self):
+        data = self._ask("riwayat pendidikan")
+        self.assertTrue(data["found"])
+        self.assertIn("Universitas Indonesia", data["answer"])
+
+    def test_entity_detail_by_title_keyword(self):
+        data = self._ask("ceritakan tentang magang data")
+        self.assertTrue(data["found"])
+        self.assertIn("Menganalisis data penjualan.", data["answer"])
+        self.assertIn("sedang berlangsung", data["answer"])
+
+    def test_education_detail_by_keyword(self):
+        data = self._ask("kuliah di universitas indonesia")
+        self.assertIn("S1 Ilmu Komputer", data["answer"])
+
+    def test_new_database_rows_are_reflected(self):
+        Experience.objects.create(title="Asisten Dosen PBP", description="Membantu praktikum.", category="part-time")
+        self.assertIn("Asisten Dosen PBP", self._ask("pengalaman")["answer"])
+        self.assertIn("Membantu praktikum.", self._ask("asisten dosen")["answer"])
+
+    def test_mading_answer_uses_latest_message(self):
+        data = self._ask("ada pesan di mading?")
+        self.assertIn("1 pesan", data["answer"])
+        self.assertIn("Tamu", data["answer"])
+        self.assertIn("Keren banget", data["answer"])
+
+    def test_empty_database_gives_unavailable_message(self):
+        Experience.objects.all().delete()
+        Education.objects.all().delete()
+        Mading.objects.all().delete()
+        for question in ("pengalaman apa saja?", "riwayat pendidikan"):
+            data = self._ask(question)
+            self.assertFalse(data["found"])
+            self.assertIn("Informasi tidak tersedia", data["answer"])
+        self.assertIn("Belum ada pesan", self._ask("mading")["answer"])
+
+    # --- Penolakan ---
+    def test_out_of_scope_questions_are_rejected(self):
+        for question in ("berapa harga bitcoin hari ini", "bagaimana cuaca besok", "siapa presiden amerika", "xyzzy qwerty"):
+            data = self._ask(question)
+            self.assertFalse(data["found"], question)
+            self.assertTrue(data["answer"].startswith("Informasi tidak tersedia"), question)
+            self.assertTrue(data["suggestions"])
+
+    def test_who_question_about_owner_name_is_answered(self):
+        self.assertTrue(self._ask("siapa abyaz?")["found"])
+        self.assertTrue(self._ask("siapa naufal")["found"])
+
+    def test_unavailable_answer_for_gibberish_and_no_suggestions_when_found(self):
+        miss = self._ask("qwertyuiop asdfgh")
+        self.assertFalse(miss["found"])
+        self.assertEqual(len(miss["suggestions"]), 5)
+        self.assertEqual(self._ask("skill")["suggestions"], [])
+
+    # --- Bahasa ---
+    def test_english_answers(self):
+        self.assertIn("is a student of", self._ask("who are you?", lang="en")["answer"])
+        self.assertIn("Information is not available", self._ask("qwerty asdf", lang="en")["answer"])
+        self.assertIn("ongoing", self._ask("tell me about magang data", lang="en")["answer"])
+
+    def test_unknown_language_falls_back_to_indonesian(self):
+        self.assertIn("Informasi tidak tersedia", self._ask("qwerty asdf", lang="fr")["answer"])
+
+    # --- Keamanan ---
+    def test_answer_never_echoes_user_input(self):
+        payload = "<script>alert(1)</script> zzzxxx"
+        data = self._ask(payload)
+        self.assertNotIn("<script>", data["answer"])
+        self.assertNotIn("zzzxxx", data["answer"])
+
+    def test_very_long_question_is_truncated_safely(self):
+        data = self._ask("a" * 5000 + " siapa")
+        self.assertEqual(data["status"], "success")
+
+    def test_normalize_and_intent_detection(self):
+        from main.chatbot import detect_intent, normalize
+
+        self.assertEqual(normalize("  Halo,   APA kabar?! "), "halo apa kabar")
+        self.assertEqual(detect_intent(normalize("Pengalamannya apa saja?")), "experience")
+        self.assertEqual(detect_intent(normalize("alamat email")), "contact")
+        self.assertIsNone(detect_intent(normalize("zzz")))
+
+    # --- Markup ---
+    def test_chatbot_widget_rendered_on_every_page(self):
+        for name in ("main:show_main", "main:show_experience", "main:show_education", "main:login"):
+            resp = self.client.get(reverse(name))
+            self.assertContains(resp, 'id="chat-panel"')
+            self.assertContains(resp, reverse("main:chatbot_api"))
+            self.assertContains(resp, "js/chatbot.js")

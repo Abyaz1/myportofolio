@@ -11,6 +11,7 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
+from main.chatbot import get_answer
 from main.forms import EducationForm, ExperienceForm, MadingForm
 from main.models import Education, Experience, Mading
 
@@ -406,3 +407,14 @@ def logout_user(request):
         return response
     return redirect("main:show_main")
 
+
+def chatbot_api(request):
+    if request.method != "GET":
+        return JsonResponse({"status": "error", "message": "Metode tidak diizinkan."}, status=405)
+
+    question = request.GET.get("q", "").strip()
+    if not question:
+        return JsonResponse({"status": "error", "message": "Pertanyaan tidak boleh kosong."}, status=400)
+
+    result = get_answer(question, request.GET.get("lang", "id"))
+    return JsonResponse({"status": "success", **result})

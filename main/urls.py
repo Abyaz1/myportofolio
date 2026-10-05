@@ -1,5 +1,6 @@
 from django.urls import path
 from main.views import (
+    chatbot_api,
     create_education,
     create_education_ajax,
     create_experience,
@@ -43,6 +44,7 @@ urlpatterns = [
     path('education/<uuid:education_id>/star/', toggle_star_education, name='toggle_star_education'),
     path('api/experiences/', get_experience_json, name='get_experience_json'),
     path('api/educations/', get_education_json, name='get_education_json'),
+    path('api/chatbot/', chatbot_api, name='chatbot_api'),
     path('mading/create/', create_mading, name='create_mading'),
     path('mading/<uuid:mading_id>/increase/', increase_mading, name='increase_mading'),
     path('mading/<uuid:mading_id>/decrease/', decrease_mading, name='decrease_mading'),

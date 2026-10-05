@@ -1,0 +1,18 @@
+<button type="button" class="chat-fab" id="chat-fab" aria-label="Chatbot" aria-expanded="false" aria-controls="chat-panel">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+</button>
+<section class="chat-panel" id="chat-panel" role="dialog" aria-label="Chatbot" data-endpoint="{% url 'main:chatbot_api' %}">
+    <div class="chat-head">
+        <div>
+            Abyaz Bot
+            <small data-i18n="chat.sub">Tanya seputar portofolio ini</small>
+        </div>
+        <button type="button" class="chat-close" id="chat-close" aria-label="Tutup">&times;</button>
+    </div>
+    <div class="chat-log" id="chat-log" aria-live="polite"></div>
+    <div class="chat-suggest" id="chat-suggest"></div>
+    <form class="chat-form" id="chat-form" autocomplete="off">
+        <input type="text" id="chat-input" maxlength="200" placeholder="Ketik pertanyaan..." data-i18n-placeholder="chat.placeholder" aria-label="Pertanyaan">
+        <button type="submit" data-i18n="chat.send">Kirim</button>
+    </form>
+</section>

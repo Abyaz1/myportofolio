@@ -56,7 +56,9 @@
             <p>&copy; 2026 {{ name }}. <span data-i18n="footer.faculty">Fakultas Ilmu Komputer, Universitas Indonesia.</span></p>
         </div>
     </footer>
+    {% include 'components/chatbot.html' %}
     <script src="{% static 'js/site.js' %}"></script>
+    <script src="{% static 'js/chatbot.js' %}"></script>
     {% block script %}{% endblock script %}
     {% include 'components/toast.html' %}
 </body>

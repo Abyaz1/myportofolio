@@ -62,7 +62,10 @@
         'modal.confirm_p1': 'Are you sure you want to delete',
         'category.academic': 'Academic',
         'star.be_first': 'Be the first to star',
-        'star.by': 'Starred by'
+        'star.by': 'Starred by',
+        'chat.sub': 'Ask about this portfolio',
+        'chat.placeholder': 'Type a question...',
+        'chat.send': 'Send'
     };
 
     const root = document.documentElement;
