@@ -698,3 +698,285 @@ class MainTest(TestCase):
         self.assertEqual(form_valid.cleaned_data["institution"], "Universitas Indonesia")
         self.assertEqual(form_valid.cleaned_data["Activity"], "S1 Ilmu Komputer")
 
+
+
+class AjaxSecurityTest(TestCase):
+    """CSRF, otorisasi per peran, dan sanitasi pada endpoint AJAX."""
+
+    def setUp(self):
+        from django.contrib.auth.models import Group, User
+        from django.test import Client
+
+        self.csrf_client = Client(enforce_csrf_checks=True)
+        self.admin = User.objects.create_superuser("admin", "a@example.com", "adminpassword")
+        self.regular = User.objects.create_user("biasa", password="userpassword")
+        self.editor = User.objects.create_user("editor", password="editorpassword")
+        self.editor.groups.add(Group.objects.create(name="Editor"))
+        self.exp_payload = {
+            "title": "Riset AI",
+            "description": "Meneliti model bahasa.",
+            "category": "research",
+            "thumbnail": "",
+        }
+        self.edu_payload = {"institution": "SMAN 1", "Activity": "IPA"}
+
+    def _token(self, client):
+        client.get(reverse("main:show_experience"))
+        return client.cookies["csrftoken"].value
+
+    def _post(self, client, name, data, token=None):
+        extra = {"HTTP_X_CSRFTOKEN": token} if token else {}
+        return client.post(reverse(name), data=data, **extra)
+
+    # --- CSRF ---
+    def test_ajax_create_rejects_missing_csrf_token(self):
+        self.csrf_client.login(username="admin", password="adminpassword")
+        for name, data in (
+            ("main:create_experience_ajax", self.exp_payload),
+            ("main:create_education_ajax", self.edu_payload),
+        ):
+            self.assertEqual(self._post(self.csrf_client, name, data).status_code, 403)
+        self.assertFalse(Experience.objects.exists())
+        self.assertFalse(Education.objects.exists())
+
+    def test_ajax_create_accepts_csrf_header(self):
+        self.csrf_client.login(username="admin", password="adminpassword")
+        token = self._token(self.csrf_client)
+        exp = self._post(self.csrf_client, "main:create_experience_ajax", self.exp_payload, token)
+        edu = self._post(self.csrf_client, "main:create_education_ajax", self.edu_payload, token)
+        self.assertEqual(exp.status_code, 201)
+        self.assertEqual(edu.status_code, 201)
+        self.assertTrue(Experience.objects.filter(pk=exp.json()["id"]).exists())
+        self.assertTrue(Education.objects.filter(pk=edu.json()["id"]).exists())
+
+    def test_ajax_create_accepts_csrfmiddlewaretoken_field(self):
+        self.csrf_client.login(username="admin", password="adminpassword")
+        token = self._token(self.csrf_client)
+        resp = self._post(
+            self.csrf_client,
+            "main:create_education_ajax",
+            {**self.edu_payload, "csrfmiddlewaretoken": token},
+        )
+        self.assertEqual(resp.status_code, 201)
+
+    # --- Otorisasi per peran ---
+    def test_ajax_create_forbidden_for_non_superuser_roles(self):
+        from django.test import Client
+
+        for username, password in (("biasa", "userpassword"), ("editor", "editorpassword")):
+            client = Client()
+            client.login(username=username, password=password)
+            for name, data in (
+                ("main:create_experience_ajax", self.exp_payload),
+                ("main:create_education_ajax", self.edu_payload),
+            ):
+                resp = self._post(client, name, data)
+                self.assertEqual(resp.status_code, 403, f"{username} -> {name}")
+                self.assertEqual(resp.json()["status"], "error")
+        self.assertFalse(Experience.objects.exists())
+        self.assertFalse(Education.objects.exists())
+
+    def test_ajax_create_rejects_non_post_method(self):
+        self.client.login(username="admin", password="adminpassword")
+        for name in ("main:create_experience_ajax", "main:create_education_ajax"):
+            resp = self.client.get(reverse(name))
+            self.assertEqual(resp.status_code, 405)
+            self.assertEqual(resp.json()["status"], "error")
+
+    # --- Respons validasi & sanitasi ---
+    def test_ajax_validation_error_contains_message_and_field_errors(self):
+        self.client.login(username="admin", password="adminpassword")
+        resp = self._post(self.client, "main:create_experience_ajax", {**self.exp_payload, "title": ""})
+        self.assertEqual(resp.status_code, 400)
+        body = resp.json()
+        self.assertEqual(body["status"], "error")
+        self.assertTrue(body["message"])
+        self.assertIn("title", body["errors"])
+
+    def test_ajax_create_strips_html_tags_before_saving(self):
+        self.client.login(username="admin", password="adminpassword")
+        resp = self._post(self.client, "main:create_experience_ajax", {
+            **self.exp_payload,
+            "title": "<b>Asisten</b> Dosen",
+            "description": "<img src=x onerror=alert(1)>Mengajar",
+        })
+        self.assertEqual(resp.status_code, 201)
+        saved = Experience.objects.get(pk=resp.json()["id"])
+        self.assertEqual(saved.title, "Asisten Dosen")
+        self.assertEqual(saved.description, "Mengajar")
+
+        resp = self._post(self.client, "main:create_education_ajax", {
+            "institution": "<i>UI</i>", "Activity": "<u>S1</u>",
+        })
+        saved_edu = Education.objects.get(pk=resp.json()["id"])
+        self.assertEqual((saved_edu.institution, saved_edu.Activity), ("UI", "S1"))
+
+    def test_ajax_create_rejects_html_only_input(self):
+        self.client.login(username="admin", password="adminpassword")
+        resp = self._post(self.client, "main:create_experience_ajax", {**self.exp_payload, "title": "<b></b>"})
+        self.assertEqual(resp.status_code, 400)
+        resp = self._post(self.client, "main:create_education_ajax", {"institution": "<i></i>", "Activity": "ok"})
+        self.assertEqual(resp.status_code, 400)
+        self.assertFalse(Experience.objects.exists())
+        self.assertFalse(Education.objects.exists())
+
+    def test_mading_form_strips_html_tags(self):
+        from main.forms import MadingForm
+
+        form = MadingForm(data={"name": "<b>Budi</b>", "message": "<script>x</script>Halo"})
+        self.assertTrue(form.is_valid())
+        self.assertEqual(form.cleaned_data["name"], "Budi")
+        self.assertNotIn("<", form.cleaned_data["message"])
+        self.assertFalse(MadingForm(data={"name": "<b></b>", "message": "Halo"}).is_valid())
+
+
+class ListJsonTest(TestCase):
+    """Endpoint JSON untuk halaman daftar (pengunjung, user login, pencarian)."""
+
+    def setUp(self):
+        from django.contrib.auth.models import User
+
+        self.user = User.objects.create_user("pengguna", password="userpassword")
+        self.other = User.objects.create_user("lain", password="userpassword")
+        self.exp = Experience.objects.create(title="Magang Data", description="d", category="internship")
+        Experience.objects.create(title="Freelance Web", description="d", category="freelance")
+        self.edu = Education.objects.create(institution="Universitas Indonesia", Activity="S1 Ilmu Komputer")
+        Education.objects.create(institution="SMAN 8", Activity="IPA")
+
+    def _item(self, url_name, obj):
+        return next(i for i in self.client.get(reverse(url_name)).json() if i["id"] == str(obj.id))
+
+    def test_anonymous_gets_star_info_without_own_star(self):
+        self.exp.starred_by.add(self.user, self.other)
+        self.edu.starred_by.add(self.user)
+
+        exp_item = self._item("main:get_experience_json", self.exp)
+        edu_item = self._item("main:get_education_json", self.edu)
+        self.assertEqual(exp_item["star_count"], 2)
+        self.assertFalse(exp_item["is_starred"])
+        self.assertEqual(edu_item["star_count"], 1)
+        self.assertFalse(edu_item["is_starred"])
+
+    def test_is_starred_is_per_logged_in_user(self):
+        self.exp.starred_by.add(self.user)
+        self.edu.starred_by.add(self.user)
+
+        self.client.login(username="pengguna", password="userpassword")
+        self.assertTrue(self._item("main:get_experience_json", self.exp)["is_starred"])
+        self.assertTrue(self._item("main:get_education_json", self.edu)["is_starred"])
+
+        self.client.login(username="lain", password="userpassword")
+        exp_item = self._item("main:get_experience_json", self.exp)
+        self.assertFalse(exp_item["is_starred"])
+        self.assertEqual(exp_item["star_count"], 1)
+
+    def test_experience_search_is_case_insensitive_and_can_be_empty(self):
+        url = reverse("main:get_experience_json")
+        self.assertEqual([i["title"] for i in self.client.get(url + "?title=magang").json()], ["Magang Data"])
+        self.assertEqual(len(self.client.get(url + "?title=").json()), 2)
+        self.assertEqual(len(self.client.get(url + "?title=%20%20").json()), 2)
+        self.assertEqual(self.client.get(url + "?title=tidak-ada").json(), [])
+
+    def test_education_search_matches_institution_or_activity(self):
+        url = reverse("main:get_education_json")
+        self.assertEqual(len(self.client.get(url + "?title=sman").json()), 1)
+        self.assertEqual(len(self.client.get(url + "?title=ilmu").json()), 1)
+        self.assertEqual(self.client.get(url + "?title=tidak-ada").json(), [])
+
+    def test_json_contains_fields_needed_by_frontend(self):
+        exp_item = self.client.get(reverse("main:get_experience_json")).json()[0]
+        for key in ("id", "title", "description", "category_display", "thumbnail",
+                    "started_at", "is_ongoing", "star_count", "is_starred", "starred_by"):
+            self.assertIn(key, exp_item)
+        edu_item = self.client.get(reverse("main:get_education_json")).json()[0]
+        for key in ("id", "institution", "activity", "started_at", "is_ongoing",
+                    "star_count", "is_starred", "starred_by"):
+            self.assertIn(key, edu_item)
+
+    def test_list_pages_open_for_anonymous_and_prefill_query(self):
+        for name in ("main:show_experience", "main:show_education"):
+            resp = self.client.get(reverse(name) + "?title=halo")
+            self.assertEqual(resp.status_code, 200)
+            self.assertContains(resp, 'value="halo"')
+
+
+class MadingAjaxTest(TestCase):
+    def setUp(self):
+        self.mading = Mading.objects.create(name="Tamu", message="Halo!")
+
+    def test_like_endpoints_return_json_for_ajax(self):
+        headers = {"HTTP_X_REQUESTED_WITH": "XMLHttpRequest"}
+        inc = self.client.post(reverse("main:increase_mading", args=[self.mading.id]), **headers)
+        self.assertEqual(inc.status_code, 200)
+        self.assertEqual(inc.json(), {"status": "success", "likes": 1})
+        dec = self.client.post(reverse("main:decrease_mading", args=[self.mading.id]), **headers)
+        self.assertEqual(dec.json()["likes"], 0)
+
+    def test_like_endpoint_redirects_without_ajax_header(self):
+        resp = self.client.post(reverse("main:increase_mading", args=[self.mading.id]))
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn("#mading-", resp["Location"])
+
+
+class ThemeAndLanguageTest(TestCase):
+    """Markup dark mode dan pilihan bahasa ID/EN."""
+
+    @staticmethod
+    def _read_static(path):
+        from django.contrib.staticfiles import finders
+
+        with open(finders.find(path), encoding="utf-8") as handle:
+            return handle.read()
+
+    def _known_keys(self):
+        import re
+
+        return set(re.findall(r"'([\w.]+)'\s*:", self._read_static("js/site.js")))
+
+    def test_base_has_theme_and_language_controls(self):
+        resp = self.client.get(reverse("main:show_main"))
+        self.assertContains(resp, 'id="theme-toggle"')
+        self.assertContains(resp, 'id="lang-toggle"')
+        self.assertContains(resp, "portfolio_theme")
+        self.assertContains(resp, "js/site.js")
+
+    def test_theme_script_runs_before_stylesheet(self):
+        html = self.client.get(reverse("main:show_main")).content.decode()
+        self.assertLess(html.index("portfolio_theme"), html.index("css/style.css"))
+
+    def test_dark_theme_variables_defined(self):
+        css = self._read_static("css/style.css")
+        self.assertIn(':root[data-theme="dark"]', css)
+        for var in ("--surface", "--surface-alt", "--edge", "--danger", "--overlay"):
+            self.assertIn(var + ":", css)
+
+    def test_every_i18n_key_used_in_templates_has_english_translation(self):
+        import re
+        from pathlib import Path
+
+        from django.conf import settings
+
+        used = set()
+        for path in Path(settings.BASE_DIR, "templates").rglob("*.html"):
+            text = path.read_text(encoding="utf-8")
+            used |= set(re.findall(r'data-i18n(?:-placeholder)?="([\w.]+)"', text))
+            used |= set(re.findall(r"data-i18n=\"[^\"]*?'([\w.]+)'", text))
+        self.assertTrue(used, "tidak ada kunci i18n ditemukan di template")
+        self.assertEqual(sorted(used - self._known_keys()), [])
+
+    def test_i18n_keys_used_by_list_scripts_exist(self):
+        import re
+
+        known = self._known_keys()
+        for script in ("js/experience.js", "js/education.js"):
+            used = set(re.findall(r"\bt\('([\w.]+)'", self._read_static(script)))
+            self.assertEqual(sorted(used - known), [], script)
+
+    def test_mading_form_placeholders_are_translatable(self):
+        resp = self.client.get(reverse("main:show_main"))
+        self.assertContains(resp, 'data-i18n-placeholder="mading.name.ph"')
+        self.assertContains(resp, 'data-i18n-placeholder="mading.message.ph"')
+
+    def test_search_inputs_are_translatable(self):
+        self.assertContains(self.client.get(reverse("main:show_experience")), 'data-i18n-placeholder="search.exp"')
+        self.assertContains(self.client.get(reverse("main:show_education")), 'data-i18n-placeholder="search.edu"')
