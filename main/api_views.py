@@ -1,3 +1,5 @@
+# API views for portfolio resources using Django REST Framework.
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
@@ -7,17 +9,22 @@ from rest_framework.decorators import (
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from main.models import Experience, Education
+from main.models import Education, Experience
 from main.permissions import (
-    IsPortfolioOwnerOrReadOnly,
     IsPortfolioOwnerOrEditorOrReadOnly,
+    IsPortfolioOwnerOrReadOnly,
 )
-from main.serializers import ExperienceSerializer, EducationSerializer
+from main.serializers import EducationSerializer, ExperienceSerializer
 
 
+def _toggle_star(instance, user):
+    if instance.starred_by.filter(pk=user.pk).exists():
+        instance.starred_by.remove(user)
+    else:
+        instance.starred_by.add(user)
 
-# Experience REST API 
 
+# Experience endpoints
 @api_view(["GET", "HEAD", "POST"])
 @authentication_classes([SessionAuthentication])
 @permission_classes([IsPortfolioOwnerOrReadOnly])
@@ -54,7 +61,7 @@ def experience_detail(request, experience_id):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     serializer = ExperienceSerializer(
-        experience, data=request.data, partial=request.method == "PATCH",
+        experience, data=request.data, partial=(request.method == "PATCH"),
         context={"request": request},
     )
     serializer.is_valid(raise_exception=True)
@@ -67,16 +74,12 @@ def experience_detail(request, experience_id):
 @permission_classes([IsAuthenticated])
 def experience_star(request, experience_id):
     experience = get_object_or_404(Experience, pk=experience_id)
-    if experience.starred_by.filter(pk=request.user.pk).exists():
-        experience.starred_by.remove(request.user)
-    else:
-        experience.starred_by.add(request.user)
+    _toggle_star(experience, request.user)
     serializer = ExperienceSerializer(experience, context={"request": request})
     return Response(serializer.data)
 
 
-# Education REST API 
-
+# Education endpoints
 @api_view(["GET", "HEAD", "POST"])
 @authentication_classes([SessionAuthentication])
 @permission_classes([IsPortfolioOwnerOrEditorOrReadOnly])
@@ -85,7 +88,9 @@ def education_list(request):
         educations = Education.objects.prefetch_related("starred_by").order_by("-started_at", "id")
         title = request.query_params.get("title", "").strip()
         if title:
-            educations = educations.filter(institution__icontains=title) | educations.filter(Activity__icontains=title)
+            educations = educations.filter(
+                Q(institution__icontains=title) | Q(Activity__icontains=title)
+            )
         serializer = EducationSerializer(
             educations, many=True, context={"request": request},
         )
@@ -118,7 +123,7 @@ def education_detail(request, education_id):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     serializer = EducationSerializer(
-        education, data=request.data, partial=request.method == "PATCH",
+        education, data=request.data, partial=(request.method == "PATCH"),
         context={"request": request},
     )
     serializer.is_valid(raise_exception=True)
@@ -131,9 +136,6 @@ def education_detail(request, education_id):
 @permission_classes([IsAuthenticated])
 def education_star(request, education_id):
     education = get_object_or_404(Education, pk=education_id)
-    if education.starred_by.filter(pk=request.user.pk).exists():
-        education.starred_by.remove(request.user)
-    else:
-        education.starred_by.add(request.user)
+    _toggle_star(education, request.user)
     serializer = EducationSerializer(education, context={"request": request})
     return Response(serializer.data)

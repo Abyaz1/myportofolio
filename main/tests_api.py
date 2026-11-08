@@ -1,3 +1,4 @@
+# Unit tests for Experience and Education REST API endpoints.
 import uuid
 
 from django.contrib.auth.models import Group, User
