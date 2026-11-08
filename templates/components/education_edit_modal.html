@@ -1,0 +1,50 @@
+<div id="edit-education-modal"
+     class="project-form-modal"
+     popover="auto"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="edit-education-modal-title">
+    <button type="button"
+            class="project-form-modal__backdrop"
+            popovertarget="edit-education-modal"
+            popovertargetaction="hide"
+            aria-label="Tutup form ubah pendidikan"></button>
+
+    <div class="project-form-modal__content">
+        <button type="button"
+                class="project-form-modal__close"
+                popovertarget="edit-education-modal"
+                popovertargetaction="hide"
+                aria-label="Tutup form ubah pendidikan">×</button>
+
+        <h2 id="edit-education-modal-title">Ubah Pendidikan</h2>
+        <form id="edit-education-form" class="project-form">
+            <input type="hidden" id="edit-education-id" name="id">
+            <div class="form-group">
+                <label for="edit-education-institution">Nama Institusi</label>
+                <input type="text"
+                       id="edit-education-institution"
+                       name="institution"
+                       class="form-control"
+                       required
+                       maxlength="255">
+            </div>
+            <div class="form-group">
+                <label for="edit-education-activity">Aktivitas / Program</label>
+                <input type="text"
+                       id="edit-education-activity"
+                       name="Activity"
+                       class="form-control"
+                       required
+                       maxlength="255">
+            </div>
+            <div class="project-form-modal__actions">
+                <button type="button"
+                        class="button button-secondary"
+                        popovertarget="edit-education-modal"
+                        popovertargetaction="hide">Batal</button>
+                <button type="submit" class="button">Simpan Perubahan</button>
+            </div>
+        </form>
+    </div>
+</div>

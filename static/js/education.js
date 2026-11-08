@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const emptyElement = document.getElementById('education-empty-state');
     const gridElement = document.getElementById('education-grid');
     const educationForm = document.getElementById('education-form');
+    const editEducationForm = document.getElementById('edit-education-form');
 
     const timelineBtn = document.getElementById('education-view-timeline');
     const gridBtn = document.getElementById('education-view-grid');
@@ -191,7 +192,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         if (isSuperuser || isEditor) {
-            actionsHtml += `<a href="/education/${id}/edit/" class="button button-secondary">${escapeHtml(editBtn)}</a>\n`;
+            actionsHtml += `<button type="button" class="button button-secondary" data-action="edit" data-id="${escapeHtml(id)}" data-institution="${escapeHtml(institution)}" data-activity="${escapeHtml(activity)}">${escapeHtml(editBtn)}</button>\n`;
         }
 
         if (isSuperuser) {
@@ -258,7 +259,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         <span class="timeline-period-badge">
                             <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                 <circle cx="12" cy="12" r="10"></circle>
-                                <polyline points="12 6 12 16 14"></polyline>
+                                <polyline points="12 6 12 12 16 14"></polyline>
                             </svg>
                             ${escapeHtml(periodText)}
                         </span>
@@ -372,6 +373,24 @@ document.addEventListener('DOMContentLoaded', function () {
         const id = button.dataset.id;
         if (!id) return;
 
+        if (action === 'edit') {
+            const editModal = document.getElementById('edit-education-modal');
+            if (editModal) {
+                const idInput = document.getElementById('edit-education-id');
+                const instInput = document.getElementById('edit-education-institution');
+                const actInput = document.getElementById('edit-education-activity');
+                if (idInput) idInput.value = id;
+                if (instInput) instInput.value = button.dataset.institution || '';
+                if (actInput) actInput.value = button.dataset.activity || '';
+                if (typeof editModal.showPopover === 'function') {
+                    editModal.showPopover();
+                }
+            } else {
+                window.location.href = `/education/${id}/edit/`;
+            }
+            return;
+        }
+
         button.disabled = true;
         try {
             if (action === 'star') {
@@ -432,6 +451,42 @@ document.addEventListener('DOMContentLoaded', function () {
             } catch (err) {
                 if (typeof showToast === 'function') {
                     showToast('Could not create education', err.message, 'error');
+                }
+            } finally {
+                if (submitBtn) submitBtn.disabled = false;
+            }
+        });
+    }
+
+    if (editEducationForm) {
+        editEducationForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const idInput = document.getElementById('edit-education-id');
+            const id = idInput ? idInput.value : '';
+            if (!id) return;
+
+            const submitBtn = editEducationForm.querySelector('button[type="submit"]');
+            if (submitBtn) submitBtn.disabled = true;
+
+            try {
+                const fields = new FormData(editEducationForm);
+                const payload = {
+                    institution: fields.get('institution') || '',
+                    Activity: fields.get('Activity') || '',
+                };
+
+                await writeEducation(endpointWithId(detailPattern, id), 'PATCH', payload);
+                const editModal = document.getElementById('edit-education-modal');
+                if (editModal && typeof editModal.hidePopover === 'function') {
+                    editModal.hidePopover();
+                }
+                if (typeof showToast === 'function') {
+                    showToast('Success', 'Education updated.', 'success');
+                }
+                await fetchEducations(searchInput.value.trim());
+            } catch (err) {
+                if (typeof showToast === 'function') {
+                    showToast('Could not update education', err.message, 'error');
                 }
             } finally {
                 if (submitBtn) submitBtn.disabled = false;

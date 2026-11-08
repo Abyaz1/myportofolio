@@ -6,7 +6,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 
-from main.models import Experience, Education
+from main.models import Education, Experience
 
 
 class ExperienceAPITest(APITestCase):
@@ -175,21 +175,62 @@ class EducationAPITest(APITestCase):
         self.assertEqual(response.data[0]["id"], str(self.education.id))
         self.assertEqual(self.client.get(self.detail_url).status_code, status.HTTP_200_OK)
 
+    def test_search_and_empty_results(self):
+        response = self.client.get(self.list_url, {"title": "Indonesia"})
+        self.assertEqual(len(response.data), 1)
+        response = self.client.get(self.list_url, {"title": "not-found"})
+        self.assertEqual(response.data, [])
+
+    def test_missing_education(self):
+        url = reverse("api:education-detail", args=[uuid.uuid4()])
+        self.assertEqual(self.client.get(url).status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_guest_and_visitor_cannot_write(self):
+        for user in (None, self.visitor):
+            self.client.force_authenticate(user=user)
+            self.assertEqual(self.client.post(self.list_url, self.payload, format="json").status_code, 403)
+            self.assertEqual(self.client.patch(self.detail_url, {"institution": "Changed"}, format="json").status_code, 403)
+            self.assertEqual(self.client.delete(self.detail_url).status_code, 403)
+        self.assertEqual(Education.objects.count(), 1)
+        self.education.refresh_from_db()
+        self.assertEqual(self.education.institution, "Universitas Indonesia")
+
     def test_editor_can_patch_education_but_cannot_create_or_delete(self):
         self.client.force_authenticate(user=self.editor)
-        # Editor can PATCH
         response = self.client.patch(self.detail_url, {"institution": "UI Baru"}, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.education.refresh_from_db()
         self.assertEqual(self.education.institution, "UI Baru")
 
-        # Editor cannot POST (create)
         post_response = self.client.post(self.list_url, self.payload, format="json")
         self.assertEqual(post_response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(Education.objects.count(), 1)
 
-        # Editor cannot DELETE
         delete_response = self.client.delete(self.detail_url)
         self.assertEqual(delete_response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(Education.objects.filter(pk=self.education.id).exists())
+
+    def test_owner_can_create_and_delete(self):
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.post(self.list_url, self.payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(Education.objects.filter(pk=response.data["id"]).exists())
+
+        response = self.client.delete(self.detail_url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Education.objects.filter(pk=self.education.id).exists())
+
+    def test_validation(self):
+        self.client.force_authenticate(user=self.owner)
+        for changes, field in [
+            ({"institution": " "}, "institution"),
+            ({"institution": "<b></b>"}, "institution"),
+            ({"Activity": " "}, "Activity"),
+        ]:
+            response = self.client.post(self.list_url, {**self.payload, **changes}, format="json")
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertIn(field, response.data)
+        self.assertEqual(Education.objects.count(), 1)
 
     def test_education_star_requires_login_and_toggles(self):
         self.assertEqual(self.client.post(self.star_url).status_code, status.HTTP_403_FORBIDDEN)
@@ -200,3 +241,21 @@ class EducationAPITest(APITestCase):
         response = self.client.post(self.star_url)
         self.assertFalse(response.data["is_starred"])
         self.assertEqual(response.data["star_count"], 0)
+
+    def test_session_write_without_csrf_is_rejected(self):
+        client = APIClient(enforce_csrf_checks=True)
+        self.assertTrue(client.login(username="owner_edu", password="test-password"))
+        response = client.post(self.list_url, self.payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(Education.objects.count(), 1)
+
+    def test_session_write_with_csrf_succeeds(self):
+        client = APIClient(enforce_csrf_checks=True)
+        client.login(username="owner_edu", password="test-password")
+        page = client.get(self.list_url, HTTP_ACCEPT="text/html")
+        self.assertEqual(page.status_code, status.HTTP_200_OK)
+        token = client.cookies["csrftoken"].value
+        response = client.post(
+            self.list_url, self.payload, format="json", HTTP_X_CSRFTOKEN=token,
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)

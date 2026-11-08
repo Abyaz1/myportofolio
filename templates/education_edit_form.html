@@ -1,13 +1,17 @@
 {% extends "base.html" %}
+{% load static %}
+
 {% block meta %}
     <title>Edit Education - {{ name }}</title>
 {% endblock meta %}
+
 {% block content %}
     <main>
         <section class="education-section">
             <div class="container">
                 <h1>Edit Education</h1>
-                <form method="post"
+                <form id="education-edit-page-form"
+                      method="post"
                       action="{% url 'main:edit_education' education.id %}"
                       class="education-form">
                     {% csrf_token %}
@@ -27,3 +31,56 @@
         </section>
     </main>
 {% endblock content %}
+
+{% block script %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('education-edit-page-form');
+    if (!form) return;
+
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) submitBtn.disabled = true;
+
+        try {
+            const formData = new FormData(form);
+            const payload = {
+                institution: formData.get('institution') || '',
+                Activity: formData.get('Activity') || '',
+            };
+            const csrfToken = formData.get('csrfmiddlewaretoken') || '';
+
+            const response = await fetch("{% url 'api:education-detail' education.id %}", {
+                method: 'PATCH',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                },
+                body: JSON.stringify(payload),
+            });
+
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                const messages = Object.values(data).flat().filter(v => typeof v === 'string');
+                throw new Error(messages.join(' ') || `HTTP ${response.status}`);
+            }
+
+            if (typeof showToast === 'function') {
+                showToast('Success', 'Pendidikan berhasil diperbarui!', 'success');
+            }
+            window.location.href = "{% url 'main:show_education' %}";
+        } catch (err) {
+            if (typeof showToast === 'function') {
+                showToast('Gagal', err.message, 'error');
+            } else {
+                alert(err.message);
+            }
+        } finally {
+            if (submitBtn) submitBtn.disabled = false;
+        }
+    });
+});
+</script>
+{% endblock script %}

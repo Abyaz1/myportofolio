@@ -65,6 +65,9 @@
 {% if user.is_superuser %}
     {% include "components/education_form_modal.html" %}
 {% endif %}
+{% if user.is_superuser or is_editor %}
+    {% include "components/education_edit_modal.html" %}
+{% endif %}
 {% endblock content %}
 
 {% block script %}
