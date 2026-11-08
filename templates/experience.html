@@ -67,12 +67,19 @@
 {% endblock content %}
 
 {% block script %}
+{% csrf_token %}
 <script>
     window.APP_CONFIG = {
         csrfToken: '{{ csrf_token }}',
         isSuperuser: {{ user.is_superuser|yesno:"true,false" }},
+        isAuthenticated: {{ user.is_authenticated|yesno:"true,false" }},
         isEditor: {{ is_editor|yesno:"true,false" }},
-        currentUsername: '{{ user.username|escapejs }}'
+        currentUsername: '{{ user.username|escapejs }}',
+        endpoints: {
+            list: "{% url 'api:experience-list' %}",
+            detail: "{% url 'api:experience-detail' '00000000-0000-0000-0000-000000000000' %}",
+            star: "{% url 'api:experience-star' '00000000-0000-0000-0000-000000000000' %}"
+        }
     };
 </script>
 <script src="{% static 'js/experience.js' %}"></script>

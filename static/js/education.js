@@ -46,16 +46,19 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Set initial view mode
     setView(currentView);
 
     const config = window.APP_CONFIG || {};
     const csrfToken = config.csrfToken || '';
     const isSuperuser = !!config.isSuperuser;
+    const isAuthenticated = !!(config.isAuthenticated ?? isSuperuser);
     const isEditor = !!config.isEditor;
     const currentUsername = config.currentUsername || '';
 
-    // Mengubah karakter khusus HTML menjadi entity agar aman dari XSS
+    const listUrl = (config.endpoints && config.endpoints.list) || '/api/v1/educations/';
+    const detailPattern = (config.endpoints && config.endpoints.detail) || '/api/v1/educations/00000000-0000-0000-0000-000000000000/';
+    const starPattern = (config.endpoints && config.endpoints.star) || '/api/v1/educations/00000000-0000-0000-0000-000000000000/star/';
+
     function escapeHtml(value) {
         return String(value ?? '')
             .replaceAll('&', '&amp;')
@@ -70,6 +73,37 @@ document.addEventListener('DOMContentLoaded', function () {
             return window.portfolioI18n.t(key, fallback);
         }
         return fallback;
+    }
+
+    function getCookie(name) {
+        const prefix = `${name}=`;
+        const cookie = document.cookie.split(';').map(v => v.trim()).find(v => v.startsWith(prefix));
+        return cookie ? decodeURIComponent(cookie.slice(prefix.length)) : null;
+    }
+
+    function endpointWithId(pattern, id) {
+        return pattern.replace('00000000-0000-0000-0000-000000000000', id);
+    }
+
+    function apiErrorMessage(data, status) {
+        const messages = Object.values(data).flat().filter(v => typeof v === 'string');
+        return messages.join(' ') || `Request failed (HTTP ${status}).`;
+    }
+
+    async function writeEducation(url, method, payload) {
+        const response = await fetch(url, {
+            method,
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken') || csrfToken,
+            },
+            body: payload === undefined ? undefined : JSON.stringify(payload),
+        });
+        if (response.status === 204) return null;
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(apiErrorMessage(data, response.status));
+        return data;
     }
 
     function formatPeriod(startedAt, endedAt, isOngoing) {
@@ -108,7 +142,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const id = item.id || item.pk;
         const institution = item.institution || (item.fields && item.fields.institution) || '';
-        const activity = item.activity || (item.fields && item.fields.Activity) || '';
+        const activity = item.activity || item.Activity || (item.fields && item.fields.Activity) || '';
         const isOngoing = item.is_ongoing !== undefined ? item.is_ongoing : !(item.fields && item.fields.ended_at);
         const statusText = isOngoing ? t('status.ongoing', 'Sedang berlangsung') : t('status.ended', 'Selesai');
         const startedAt = item.started_at || (item.fields && item.fields.started_at);
@@ -119,9 +153,10 @@ document.addEventListener('DOMContentLoaded', function () {
         const starredUsers = item.starred_by || (item.fields && item.fields.starred_by) || [];
         const starCount = item.star_count !== undefined ? item.star_count : starredUsers.length;
         const isStarred = item.is_starred !== undefined ? item.is_starred : (currentUsername && starredUsers.includes(currentUsername));
-        const starTitle = starCount > 0
-            ? `${t('star.by', 'Dibintangi oleh')} ${starredUsers.join(', ')}`
-            : t('star.be_first', 'Jadilah yang pertama memberi star');
+        const names = item.starred_by_names || (Array.isArray(starredUsers) ? starredUsers.join(', ') : '');
+        const starTitle = starCount > 0 && names
+            ? `${t('star.by', 'Dibintangi oleh')} ${names}`
+            : (starCount > 0 ? `${t('star.by', 'Dibintangi oleh')} (${starCount})` : t('star.be_first', 'Jadilah yang pertama memberi star'));
 
         const editBtn = t('btn.edit', 'Ubah');
         const deleteBtn = t('btn.delete', 'Hapus');
@@ -130,18 +165,30 @@ document.addEventListener('DOMContentLoaded', function () {
         const deleteTitle = t('modal.delete_edu_title', 'Hapus Pendidikan?');
         const confirmPrompt = t('modal.confirm_p1', 'Apakah Anda yakin ingin menghapus');
 
-        let actionsHtml = `
-            <form method="post" action="/education/${id}/star/" class="star-form">
-                <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
-                <button type="submit"
+        let actionsHtml = '';
+        if (isAuthenticated) {
+            actionsHtml += `
+                <button type="button"
                         class="button button-star${isStarred ? ' is-starred' : ''}"
+                        data-action="star"
+                        data-id="${escapeHtml(id)}"
                         title="${escapeHtml(starTitle)}">
                     <span aria-hidden="true">★</span>
                     ${isStarred ? 'Unstar' : 'Star'}
                     <span class="star-count">${starCount}</span>
                 </button>
-            </form>
-        `;
+            `;
+        } else {
+            actionsHtml += `
+                <a href="/login/"
+                   class="button button-star"
+                   title="${escapeHtml(starTitle)}">
+                    <span aria-hidden="true">★</span>
+                    Star
+                    <span class="star-count">${starCount}</span>
+                </a>
+            `;
+        }
 
         if (isSuperuser || isEditor) {
             actionsHtml += `<a href="/education/${id}/edit/" class="button button-secondary">${escapeHtml(editBtn)}</a>\n`;
@@ -183,10 +230,10 @@ document.addEventListener('DOMContentLoaded', function () {
                                     class="button button-secondary"
                                     popovertarget="delete-education-${id}"
                                     popovertargetaction="hide">${escapeHtml(cancelBtn)}</button>
-                            <form method="post" action="/education/${id}/delete/">
-                                <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
-                                <button type="submit" class="button button-danger">${escapeHtml(confirmDeleteBtn)}</button>
-                            </form>
+                            <button type="button"
+                                    class="button button-danger"
+                                    data-action="delete"
+                                    data-id="${escapeHtml(id)}">${escapeHtml(confirmDeleteBtn)}</button>
                         </div>
                     </div>
                 </div>
@@ -211,7 +258,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         <span class="timeline-period-badge">
                             <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                 <circle cx="12" cy="12" r="10"></circle>
-                                <polyline points="12 6 12 12 16 14"></polyline>
+                                <polyline points="12 6 12 16 14"></polyline>
                             </svg>
                             ${escapeHtml(periodText)}
                         </span>
@@ -281,8 +328,12 @@ document.addEventListener('DOMContentLoaded', function () {
         displayPageSection({ showLoading: true });
 
         try {
-            const url = `/api/educations/?title=${encodeURIComponent(query)}`;
-            const response = await fetch(url, { signal: currentController.signal });
+            const url = new URL(listUrl, window.location.origin);
+            if (query) url.searchParams.set('title', query);
+            const response = await fetch(url, {
+                headers: { 'Accept': 'application/json' },
+                signal: currentController.signal,
+            });
 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -297,14 +348,12 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // Event Handlers untuk Form Search
     function searchEducations() {
         fetchEducations(searchInput.value.trim());
     }
 
     searchInput.addEventListener('input', function () {
         clearTimeout(searchDebounceTimer);
-
         searchDebounceTimer = setTimeout(function () {
             searchEducations();
         }, SEARCH_DEBOUNCE_DELAY);
@@ -316,6 +365,41 @@ document.addEventListener('DOMContentLoaded', function () {
         searchEducations();
     });
 
+    gridElement.addEventListener('click', async function (event) {
+        const button = event.target.closest('button[data-action]');
+        if (!button || button.disabled) return;
+        const action = button.dataset.action;
+        const id = button.dataset.id;
+        if (!id) return;
+
+        button.disabled = true;
+        try {
+            if (action === 'star') {
+                await writeEducation(endpointWithId(starPattern, id), 'POST');
+                if (typeof showToast === 'function') {
+                    showToast('Success', 'Star updated.', 'success');
+                }
+                await fetchEducations(searchInput.value.trim());
+            } else if (action === 'delete') {
+                const modal = document.getElementById(`delete-education-${id}`);
+                if (modal && typeof modal.hidePopover === 'function') {
+                    modal.hidePopover();
+                }
+                await writeEducation(endpointWithId(detailPattern, id), 'DELETE');
+                if (typeof showToast === 'function') {
+                    showToast('Success', 'Education deleted.', 'success');
+                }
+                await fetchEducations(searchInput.value.trim());
+            }
+        } catch (error) {
+            if (typeof showToast === 'function') {
+                showToast('Request failed', error.message, 'error');
+            }
+        } finally {
+            button.disabled = false;
+        }
+    });
+
     function closeEducationModal() {
         const modal = document.getElementById('add-education-modal');
         if (modal && typeof modal.hidePopover === 'function') {
@@ -323,8 +407,9 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
     window.closeEducationModal = closeEducationModal;
+    window.writeEducation = writeEducation;
+    window.fetchEducations = fetchEducations;
 
-    // Event Handler untuk Form Tambah Pendidikan AJAX
     if (educationForm) {
         educationForm.addEventListener('submit', async function (e) {
             e.preventDefault();
@@ -332,44 +417,21 @@ document.addEventListener('DOMContentLoaded', function () {
             if (submitBtn) submitBtn.disabled = true;
 
             try {
-                const response = await fetch(educationForm.action, {
-                    method: 'POST',
-                    body: new FormData(educationForm),
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                    }
-                });
+                const fields = new FormData(educationForm);
+                const payload = Object.fromEntries([
+                    'institution', 'Activity',
+                ].map(name => [name, fields.get(name) || '']));
 
-                const data = await response.json();
-
-                if (response.ok && data.status === 'success') {
-                    educationForm.reset();
-                    closeEducationModal();
-                    if (typeof showToast === 'function') {
-                        showToast('Berhasil', data.message || 'Pendidikan baru berhasil ditambahkan!', 'success');
-                    }
-                    searchEducations();
-                } else {
-                    let errorMsg = data.message || 'Gagal menambahkan pendidikan.';
-                    if (data.errors && typeof data.errors === 'object') {
-                        const errorDetails = Object.values(data.errors)
-                            .flat()
-                            .map(err => (typeof err === 'object' && err.message) ? err.message : String(err))
-                            .join(', ');
-                        if (errorDetails) {
-                            errorMsg = errorDetails;
-                        }
-                    }
-                    if (typeof showToast === 'function') {
-                        showToast('Gagal', errorMsg, 'error');
-                    } else {
-                        alert(errorMsg);
-                    }
-                }
-            } catch (err) {
-                console.error('Error submitting education form:', err);
+                await writeEducation(listUrl, 'POST', payload);
+                educationForm.reset();
+                closeEducationModal();
                 if (typeof showToast === 'function') {
-                    showToast('Gagal', 'Terjadi kesalahan sistem saat menyimpan data.', 'error');
+                    showToast('Success', 'Education created.', 'success');
+                }
+                await fetchEducations(searchInput.value.trim());
+            } catch (err) {
+                if (typeof showToast === 'function') {
+                    showToast('Could not create education', err.message, 'error');
                 }
             } finally {
                 if (submitBtn) submitBtn.disabled = false;
@@ -377,6 +439,5 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Start application
     searchEducations();
 });
