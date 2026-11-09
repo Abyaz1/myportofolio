@@ -14,6 +14,7 @@ Website portofolio statis yang dirancang menggunakan framework Django, struktur 
 - [Tugas 2](#tugas-2)
 - [Tugas 3](#tugas-3)
 - [Tugas 5](#tugas-5)
+- [Tugas 6](#tugas-6)
 - [Progress Mingguan](#progress-mingguan)
 - [AI Disclosure](#ai-disclosure)
 - [Kontak](#kontak)
@@ -182,6 +183,30 @@ Data yang ditampilkan lewat AJAX/JavaScript lebih rentan daripada template Djang
 
 Pada proyek ini perlindungan diterapkan berlapis: (1) di sisi server, `strip_tags` pada method `clean_<field>` di `ModelForm` membuang tag HTML sebelum data disimpan, dan input yang hanya berisi tag ditolak; (2) di sisi klien, semua nilai teks yang disisipkan ke HTML melewati fungsi `escapeHtml`, sedangkan toast memakai `textContent`.
 
+
+## Tugas 6
+
+### 1. Pengertian REST, Batasan JSON, dan Perbedaan PUT vs PATCH
+REST (Representational State Transfer) adalah gaya arsitektur perancangan web API yang memperlakukan data sebagai resource yang dapat diakses melalui URI atau URL unik secara stateless. Mengembalikan format JSON saja belum cukup membuat API menjadi RESTful karena JSON hanyalah format representasi data. Sebuah API baru dianggap RESTful jika memenuhi prinsip REST, seperti URI yang berorientasi resource (kata benda, bukan aksi), penggunaan method HTTP secara semantik (GET, POST, PUT, PATCH, DELETE), penanganan status code HTTP yang sesuai (seperti 200, 201, 204, 400, 403, 404), serta sifat stateless di mana server tidak bergantung pada sesi request sebelumnya.
+
+Perbedaan PUT dan PATCH terletak pada cakupan perubahannya. PUT menggantikan seluruh representasi resource secara utuh, sehingga klien wajib mengirimkan seluruh field wajib dari data tersebut. Contohnya saat memperbarui data pendidikan lewat form edit lengkap di mana seluruh informasi institusi dan aktivitas dikirim ulang. Sebaliknya, PATCH hanya memperbarui sebagian atribut tertentu dari resource tanpa mengubah atribut lainnya (`partial=True`). Contohnya saat pengguna hanya ingin mengganti nama institusi saja secara cepat lewat modal edit ringkas tanpa mengirim ulang field lainnya.
+
+### 2. Peran Serializer pada Django REST Framework dan Keuntungannya
+Serializer pada DRF berfungsi sebagai penerjemah dua arah antara objek model atau QuerySet Django dengan format data universal seperti JSON. Serializer bertugas mengubah data database menjadi representasi JSON saat request GET (serialisasi), serta membaca input JSON dari klien, memvalidasi aturan dan tipe datanya, lalu menyimpannya ke database saat request POST, PUT, atau PATCH (deserialisasi dan validasi).
+
+Dibandingkan merakit dictionary secara manual dengan JsonResponse pada Tutorial 05, serializer memiliki banyak keunggulan. Validasi input terpusat secara deklaratif lewat `is_valid(raise_exception=True)` yang otomatis menghasilkan respons error 400 terstandarisasi. Operasi CRUD juga ditangani otomatis oleh `ModelSerializer` tanpa perlu menulis kode mapping field satu per satu. Selain itu, serialisasi banyak objek QuerySet dapat dilakukan langsung dengan argumen `many=True`, penambahan field terhitung dinamis dapat ditangani lewat `SerializerMethodField` dengan akses ke konteks request, serta atribut yang diekspos lebih terkontrol dan aman dari kebocoran data sensitif.
+
+### 3. Perbedaan Autentikasi vs Otorisasi dan Alasan Pemeriksaan Hak Akses di Server
+Autentikasi berfokus pada verifikasi identitas pengirim request ("siapa Anda"), seperti mengenali akun pengguna melalui session cookie menggunakan `SessionAuthentication` untuk mengisi `request.user`. Sementara itu, otorisasi berfokus pada pemeriksaan hak akses ("apa yang boleh Anda lakukan"), yaitu memastikan apakah pengguna yang sudah login memiliki izin untuk melakukan tindakan tertentu pada resource, yang dikelola oleh permission class seperti `IsPortfolioOwnerOrEditorOrReadOnly`.
+
+Pemeriksaan hak akses wajib dilakukan di sisi server dan tidak boleh hanya mengandalkan penyembunyian tombol di template HTML. Menyembunyikan tombol dengan kondisi template hanyalah penyesuaian visual antarmuka (UI) untuk kenyamanan pengguna, bukan sistem keamanan. Pengguna atau penyerang dapat dengan mudah melewati antarmuka web dan mengirimkan request mutasi (POST, PUT, PATCH, DELETE) secara langsung ke URL endpoint lewat DevTools, Postman, atau skrip otomatis. Permission class di server bertindak sebagai penjaga gerbang utama yang memastikan setiap request yang masuk divalidasi izinnya sebelum database dimanipulasi, dan langsung menolak request tanpa hak dengan status 403 Forbidden.
+
+### 4. Kebutuhan Token CSRF pada SessionAuthentication dan Keterbatasan force_authenticate
+Permintaan yang mengubah data tetap memerlukan token CSRF saat menggunakan SessionAuthentication karena autentikasi ini mengandalkan cookie session di browser. Browser secara otomatis menyertakan cookie tersebut pada setiap request ke origin yang sama, sehingga rentan terhadap serangan Cross-Site Request Forgery (CSRF) di mana situs pihak ketiga yang berbahaya memicu aksi atas nama pengguna tanpa sepengetahuannya. Token CSRF berupa nilai acak rahasia dari domain kita yang tidak bisa dibaca oleh situs luar berdasarkan Same-Origin Policy, sehingga request berbahaya dari luar akan ditolak oleh server dengan status 403 Forbidden karena tidak memiliki header `X-CSRFToken` yang valid.
+
+Pengujian yang hanya memakai `force_authenticate` tidak cukup untuk membuktikan perlindungan CSRF karena method tersebut merupakan helper pengujian di DRF yang membypass alur autentikasi HTTP normal dan seluruh middleware Django, termasuk middleware CSRF. Untuk membuktikan perlindungan CSRF benar-benar aktif, pengujian harus menggunakan `APIClient(enforce_csrf_checks=True)` dengan login sungguhan via `client.login()`. Pengujian ini membuktikan bahwa request mutasi tanpa token CSRF akan ditolak dengan status 403, sedangkan request yang menyertakan token CSRF valid dari cookie berhasil diproses.
+
+
 ## Progress Mingguan
 
 Progres pengembangan proyek portofolio pribadi berdasarkan riwayat commit dan rincian pengerjaan tugas:
@@ -209,7 +234,6 @@ Progres pengembangan proyek portofolio pribadi berdasarkan riwayat commit dan ri
 - Hak Akses Peran (Role-Based Access Control): Menerapkan pembatasan hak akses berbasis peran (seperti peran Editor) untuk tindakan ubah dan hapus pada data portofolio.
 - Fitur Edit Mading & Star Education & Experience: Menambahkan fitur edit pada mading pesan serta penandaan bintang (*star*) pada kartu data pendidikan (`Education`) dan pengalaman (`Experience`).
 
-
 ### Minggu 5 - Tutorial 5: AJAX, Modal, Toast, & Perlindungan XSS
 - Menampilkan Data dengan AJAX: Halaman Experience dan Education kini hanya merender kerangka halaman, lalu data diambil dengan `fetch()` dari endpoint JSON (`/api/experiences/` dan `/api/educations/`) yang disusun manual dengan `JsonResponse`, termasuk jumlah star dan status star pengguna yang login. Tersedia kondisi loading, data kosong, dan error.
 - Pencarian dengan Debouncing: Pencarian berbasis AJAX tanpa reload halaman dengan jeda 300 ms dan `AbortController` untuk membatalkan request lama.
@@ -221,17 +245,33 @@ Progres pengembangan proyek portofolio pribadi berdasarkan riwayat commit dan ri
 - Chatbot Sederhana: Widget chat di semua halaman yang mencocokkan kata kunci pertanyaan (endpoint `/api/chatbot/`), menarik data Experience, Education, dan Mading dari database, memakai template jawaban untuk pertanyaan umum (profil, skill, kontak), dan menolak pertanyaan di luar topik dengan "Informasi tidak tersedia". Mendukung bahasa Indonesia/Inggris dan menampilkan jawaban dengan `textContent`.
 - Unit Test: Menambah pengujian untuk CSRF, otorisasi per peran, status 400/403/405, sanitasi `strip_tags`, endpoint JSON dan pencarian, like mading, serta konsistensi terjemahan (total 84 tes lulus).
 
+### Minggu 6 - Tutorial 7 & Individual Assignment 6: Django REST Framework & Full AJAX API
+- Instalasi & Konfigurasi DRF: Memasang `djangorestframework~=3.18.3`, mendaftarkan `'rest_framework'` di `INSTALLED_APPS`, serta mengonfigurasi routing API `/api/v1/` dan `/api-auth/`.
+- ModelSerializer & Sanitasi: Mengimplementasikan `ExperienceSerializer` dan `EducationSerializer` dengan daftar field eksplisit, field terhitung star (`star_count`, `is_starred`, `starred_by_names`), dan validasi input `strip_tags` untuk perlindungan XSS.
+- Role-Based Access Control: Menerapkan permission class `IsPortfolioOwnerOrReadOnly` dan `IsPortfolioOwnerOrEditorOrReadOnly` untuk mengatur hak akses publik, akun login biasa, grup Editor (`PUT`/`PATCH`), dan pemilik superuser.
+- RESTful Endpoints: Membangun API view berbasis fungsi (`@api_view`) dengan `SessionAuthentication` untuk endpoint daftar (`GET`, `POST`), detail (`GET`, `PUT`, `PATCH`, `DELETE`), dan star (`POST`) pada Experience dan Education.
+- Integrasi Frontend Full AJAX: Mengalihkan halaman Experience dan Education agar mengambil data daftar, menambah data, memberi star, mengubah data via modal/form edit (`PATCH`), dan menghapus data secara asynchronous tanpa reload dokumen.
+- Automated API Testing: Menulis 23 skenario uji `APITestCase` yang memverifikasi keempat peran, validasi data, penolakan mutasi database, dan penegakan perlindungan CSRF nyata (`enforce_csrf_checks=True`), mencapai total 107 tes lulus 100%.
+
 ## AI Disclosure
 
 - Tools AI yang Digunakan: Google Gemini / Antigravity
 - Link Percakapan / Log AI: [https://share.gemini.google/MdDoL8QyJW4C](https://share.gemini.google/MdDoL8QyJW4C)
 - Ringkasan Bantuan AI:
+  - Memberikan masukan dalam perancangan struktur endpoint Django REST Framework dan skema serializer.
+  - Membantu memberikan referensi integrasi AJAX Fetch API untuk komunikasi frontend dengan endpoint DRF v1.
+  - Membantu menyusun draf awal dokumentasi proyek dan jawaban refleksi konseptual.
 
-  - Memberikan masukan dalam penyusunan struktur dokumen README agar sesuai dengan panduan dan kriteria penilaian.
-  - Membantu menyusun design skill & Interest.
-- Refleksi & Penyesuaian Mandiri:
-  - Penyesuaian bahasa dan format jawaban reflektif agar ditulis secara alami dengan bahasa yang ramah dan mudah diketik tanpa sintaks khusus (seperti simbol LaTeX).
-  - Pengecekan manual terhadap kode model, view, url, dan template agar jawaban sesuai dengan implementasi proyek aktual.
+- Analisis Kritis Keterbatasan AI:
+  - Kecenderungan menyalin template tutorial secara mentah: AI sempat menyarankan pembuatan model `Project` baru mengikuti contoh maskot tutorial, padahal proyek ini sudah memiliki arsitektur domain `Experience` dan `Education` dari tugas-tugas sebelumnya yang harus dipertahankan.
+  - Komentar kode yang redundan dan generik: AI kerap menyisipkan komentar naratif yang panjang dan mengulang hal yang sudah jelas dari kode (seperti komentar penjelas CRUD generik), sehingga melanggar prinsip clean code.
+  - Pengabaian batasan lingkungan lokal dan edge-case: AI terkadang mengasumsikan helper testing seperti `force_authenticate` sudah mencukupi seluruh aspek keamanan, tanpa menyadari bahwa middleware CSRF Django dibypass sehingga diperlukan pengujian nyata dengan `enforce_csrf_checks=True`.
+
+- Perbaikan Manual yang Dilakukan:
+  - Mengarahkan implementasi DRF agar berfokus penuh pada model `Experience` dan `Education`, serta membatalkan penambahan model yang tidak relevan dengan kebutuhan portofolio.
+  - Merefaktor kode secara menyeluruh untuk menerapkan clean code, membuang semua komentar generik, dan menyederhanakan komentar menjadi satu baris yang informatif dan relevan.
+  - Membangun modal edit langsung pada halaman Education (`education_edit_modal.html`) serta menambahkan alias URL singular `/api/v1/education/` untuk memastikan kompatibilitas penuh dengan kebutuhan pengujian dan grader.
+  - Memperluas skenario pengujian di `tests_api.py` untuk menguji hak akses seluruh peran (pengunjung, pengguna biasa, Editor, dan pemilik) dengan pengecekan integritas database secara nyata serta pengujian CSRF nyata.
 
 ## Kontak
 - Nama: M Naufal Abyaz Bawono
